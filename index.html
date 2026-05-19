@@ -209,7 +209,7 @@ button{font:inherit}
 main{
     max-width:1480px;
     margin:0 auto;
-    padding:1.15rem 1.25rem 1.6rem;
+    padding:1rem 1.25rem 1.6rem;
 }
 .resource-card{
     background:#fff;
@@ -393,18 +393,7 @@ iframe{
 </header>
 
 <main>
-    <section class="resource-card" aria-live="polite">
-        <div class="resource-head">
-            <div class="resource-title-wrap">
-                <div class="resource-eyebrow" id="tipoRecurso">Consulta activa</div>
-                <h2 id="tituloRecurso">Dashboard interactivo SIREV</h2>
-                <p id="descripcionRecurso">Análisis interactivo de resultados por periodo, regional, distrito, centro, grado, asignatura, competencia e indicador.</p>
-            </div>
-            <div class="status-pill" id="estadoRecurso">Año escolar 2025-2026</div>
-        </div>
-    </section>
-
-    <div class="report-container">
+    <div class="report-container full-focus">
         <iframe id="visorInforme" title="Visor SIREV Primaria" src="dashboard_sirev_primaria.html"></iframe>
     </div>
 </main>
@@ -450,8 +439,6 @@ let dashboardActual = "sirevInteractivo";
 function seleccionarAnio(anio) {
     anioSeleccionado = anio;
     document.getElementById("anioActualTexto").textContent = anio;
-    document.getElementById("estadoRecurso").textContent = "Año escolar " + anio;
-
     if (dashboardActual === "sirevInteractivo") abrirDashboard("sirevInteractivo");
     else abrirDashboard("powerbi");
 
@@ -461,28 +448,16 @@ function seleccionarAnio(anio) {
 function abrirDashboard(tipo) {
     dashboardActual = tipo;
     const visor = document.getElementById("visorInforme");
-    const titulo = document.getElementById("tituloRecurso");
-    const descripcion = document.getElementById("descripcionRecurso");
-    const estado = document.getElementById("estadoRecurso");
-    const tipoRecurso = document.getElementById("tipoRecurso");
     const quickNote = document.getElementById("quickNote");
     let url = "";
 
     if (tipo === "sirevInteractivo") {
         url = datosPorAnio[anioSeleccionado].dashboard;
-        tipoRecurso.textContent = "Dashboard activo";
-        titulo.textContent = "Dashboard interactivo SIREV";
-        descripcion.textContent = "Análisis interactivo de resultados por periodo, regional, distrito, centro, grado, asignatura, competencia e indicador.";
         quickNote.textContent = "Dashboard interactivo · datos consolidados";
     } else {
         url = datosPorAnio[anioSeleccionado].informe;
-        tipoRecurso.textContent = "Informe activo";
-        titulo.textContent = "Informe Power BI";
-        descripcion.textContent = "Consulta general de resultados de evaluaciones del Nivel Primario.";
         quickNote.textContent = "Informe general · Power BI";
     }
-
-    estado.textContent = "Año escolar " + anioSeleccionado;
 
     if (url) visor.src = url;
     else {
