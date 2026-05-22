@@ -647,8 +647,7 @@ function renderGeneralIndicators(){
     <div class="indicator-card priority">
       <small>Índice de priorización</small>
       <div class="val">${priority.idx.toFixed(2)}</div>
-      <div class="det">${priority.label}. Elemental: ${pctf(priority.pe)} · Satisfactorio: ${pctf(priority.ps)}.</div>
-      <div class="indicator-meter"><span style="width:${Math.min(100,priority.idx)}%"></span></div>
+<div class="det"><span class="status ${priority.st[0]}">${priority.st[1]}</span></div>      <div class="indicator-meter"><span style="width:${Math.min(100,priority.idx)}%"></span></div>
     </div>`:''}
     <div class="indicator-card good">
       <small>Aceptable + satisfactorio</small>
