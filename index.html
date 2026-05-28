@@ -387,6 +387,7 @@ iframe{
             </div>
 
             <div class="nav-spacer"></div>
+            <div id="quickNote" class="quick-note">Dashboard interactivo · datos consolidados</div>
         </div>
     </nav>
 </header>
@@ -452,14 +453,29 @@ function abrirDashboard(tipo) {
 
     if (tipo === "sirevInteractivo") {
         url = datosPorAnio[anioSeleccionado].dashboard;
-        quickNote.textContent = "Dashboard interactivo · datos consolidados";
+        visor.title = "Dashboard interactivo SIREV Primaria";
+        if (quickNote) quickNote.textContent = "Dashboard interactivo · datos consolidados";
     } else {
         url = datosPorAnio[anioSeleccionado].informe;
-        quickNote.textContent = "Informe general · Power BI";
+        visor.title = "Evaluación Diagnóstica y de Seguimiento Nivel Primario 2025-2026";
+        if (quickNote) quickNote.textContent = "Informe general · Power BI";
     }
 
-    if (url) { visor.src = url; setTimeout(ajustarAltoVisor, 500); }
-    else {
+    if (url) {
+        visor.src = url;
+
+        // Power BI se carga desde otro dominio; por seguridad del navegador no puede medirse
+        // su altura interna. Por eso se fija una altura institucional suficiente.
+        if (tipo === "powerbi") {
+            visor.style.height = "1060px";
+            visor.style.minHeight = "850px";
+            visor.scrolling = "auto";
+        } else {
+            visor.style.height = "720px";
+            visor.style.minHeight = "0";
+            setTimeout(ajustarAltoVisor, 500);
+        }
+    } else {
         visor.src = "about:blank";
         alert("Este recurso no está disponible todavía para el año escolar seleccionado.");
     }
@@ -497,6 +513,14 @@ function cerrarMenus() {
 function ajustarAltoVisor() {
     const iframe = document.getElementById("visorInforme");
     if (!iframe) return;
+
+    // Solo se ajusta automáticamente el dashboard local de SIREV.
+    // El informe Power BI es externo y debe conservar altura fija.
+    if (dashboardActual === "powerbi") {
+        iframe.style.height = "1060px";
+        iframe.style.minHeight = "850px";
+        return;
+    }
     try {
         const doc = iframe.contentDocument || iframe.contentWindow.document;
         if (!doc || !doc.body) return;
