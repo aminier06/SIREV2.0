@@ -650,7 +650,30 @@ function centerSuggest(){
 }
 function apply(){current.f=filters(); current.perf=perfSource(current.f).filter(r=>matchPerf(r,current.f)); current.read=READ.filter(r=>matchRead(r,current.f)); current.cov=COV.filter(r=>matchBase(r,current.f,true)); renderAll();}
 function aggLevels(rows,levels,idxLevel,idxVal){let m=Object.fromEntries(levels.map(k=>[k,0])); for(const r of rows){let k=idText(r[idxLevel]); if(m[k]!=null)m[k]+=r[idxVal];} return m}
-function covAgg(rows){let mat=0,ev=0,regs=new Set(),dists=new Set(),cent=new Set(); for(const r of rows){mat+=r[9];ev+=r[10];regs.add(r[0]);dists.add(r[1]);cent.add(r[2])} return {mat,ev,regs:regs.size,dists:dists.size,cent:cent.size}}
+function codigoInicial(txt,digits){
+  const m=String(txt||'').trim().match(/^(\d{1,6})/);
+  return m ? m[1].padStart(digits,'0').slice(0,digits) : '';
+}
+function regionalCodeFromValue(v){ return codigoInicial(idText(v),2); }
+function districtCodeFromValue(v){ return codigoInicial(idText(v),4); }
+function covAgg(rows){
+  let mat=0,ev=0,regs=new Set(),dists=new Set(),cent=new Set();
+  for(const r of rows){
+    mat+=r[9]||0;
+    ev+=r[10]||0;
+    // Las tarjetas territoriales deben contar unidades únicas con registro,
+    // no sumar la misma regional/distrito una vez por cada periodo seleccionado.
+    if((r[10]||0)>0){
+      const regCode=regionalCodeFromValue(r[0]);
+      const distCode=districtCodeFromValue(r[1]);
+      const centCode=centerCodeFromText(idText(r[2]));
+      if(regCode) regs.add(regCode);
+      if(distCode) dists.add(distCode);
+      if(centCode) cent.add(centCode);
+    }
+  }
+  return {mat,ev,regs:Math.min(regs.size,18),dists:Math.min(dists.size,122),cent:cent.size}
+}
 function centerCodeSetFromCov(rows){
   const s=new Set();
   for(const r of rows){
