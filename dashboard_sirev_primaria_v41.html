@@ -633,6 +633,89 @@ header{position:relative!important;top:auto!important;}
   .v21-header .brand-sub{display:none!important;}
 }
 
+
+
+/* Ajuste visual solicitado: panel de filtros más liviano y jerárquico, sin alterar la lógica */
+.dashboard-filter-panel.v21-filter-panel{
+  max-width:1320px!important;
+  padding:14px 16px 15px!important;
+  border-radius:16px!important;
+  background:#ffffff!important;
+  border:1px solid rgba(0,59,113,.13)!important;
+  box-shadow:0 6px 18px rgba(0,59,113,.065)!important;
+}
+.dashboard-filter-panel.v21-filter-panel::before{
+  content:'Filtros de consulta'!important;
+  top:-11px!important;
+  left:18px!important;
+  background:#ffffff!important;
+  color:#003B71!important;
+  border-color:rgba(0,59,113,.10)!important;
+}
+.v21-filter-panel .top-filters.filter-consulta-grid{
+  display:grid!important;
+  grid-template-columns:repeat(12,minmax(0,1fr))!important;
+  gap:10px 12px!important;
+  align-items:end!important;
+}
+.filter-consulta-grid .tf-periodo{grid-column:span 2!important;}
+.filter-consulta-grid .tf-ciclo{grid-column:span 2!important;}
+.filter-consulta-grid .tf-grado{grid-column:span 2!important;}
+.filter-consulta-grid .tf-area{grid-column:span 3!important;}
+.filter-consulta-grid .tf-comp{grid-column:span 5!important;}
+.filter-consulta-grid .tf-ind{grid-column:span 5!important;}
+.filter-consulta-grid .filter-actions{grid-column:span 2!important;display:flex!important;align-items:end!important;justify-content:flex-end!important;min-width:0!important;}
+.v21-filter-panel .tf label{
+  font-size:9.2px!important;
+  margin-bottom:4px!important;
+  letter-spacing:.075em!important;
+}
+.v21-filter-panel select{
+  min-height:38px!important;
+  height:38px!important;
+  border-radius:11px!important;
+  padding-top:7px!important;
+  padding-bottom:7px!important;
+  box-shadow:0 3px 9px rgba(0,59,113,.035)!important;
+}
+button.secondary.top-reset{
+  width:100%!important;
+  min-height:38px!important;
+  padding:8px 12px!important;
+  border-radius:11px!important;
+  background:#f7fbff!important;
+  border-color:#bdd0e5!important;
+  color:#003B71!important;
+  box-shadow:0 3px 9px rgba(0,59,113,.04)!important;
+}
+button.secondary.top-reset:hover{
+  background:#eef6ff!important;
+  border-color:#7ea9d0!important;
+}
+.dash-header.v21-header{
+  padding-bottom:16px!important;
+  border-bottom-width:3px!important;
+  box-shadow:0 7px 18px rgba(0,59,113,.09)!important;
+}
+.v21-header .brand-sub{margin-bottom:2px!important;}
+.layout{border-top:0!important;}
+.tabs{padding-top:4px!important;}
+@media(max-width:1180px){
+  .v21-filter-panel .top-filters.filter-consulta-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important;}
+  .filter-consulta-grid .tf-periodo,
+  .filter-consulta-grid .tf-ciclo,
+  .filter-consulta-grid .tf-grado{grid-column:span 2!important;}
+  .filter-consulta-grid .tf-area{grid-column:span 3!important;}
+  .filter-consulta-grid .tf-comp{grid-column:span 3!important;}
+  .filter-consulta-grid .tf-ind{grid-column:span 4!important;}
+  .filter-consulta-grid .filter-actions{grid-column:span 2!important;}
+}
+@media(max-width:720px){
+  .v21-filter-panel .top-filters.filter-consulta-grid{grid-template-columns:1fr!important;}
+  .filter-consulta-grid .tf,
+  .filter-consulta-grid .filter-actions{grid-column:auto!important;}
+}
+
 </style>
 </head>
 <body>
@@ -644,15 +727,18 @@ header{position:relative!important;top:auto!important;}
     <div class="brand-sub">Consulta interactiva por grado, área, competencia, indicador y periodo.</div>
   </div>
   <div class="dashboard-filter-panel v21-filter-panel" aria-label="Panel de filtros principales">
-    <div class="top-filters">
-      <div class="tf"><label>Ciclo</label><select id="fCiclo"><option value="">Todos los ciclos</option><option value="1">Primer ciclo (1ro–3ro)</option><option value="2">Segundo ciclo (4to–6to)</option></select></div><div class="tf"><label>Grado</label><select id="fGrado"></select></div>
-      <div class="tf"><label>Área/asignatura</label><select id="fArea"></select></div>
-      <div class="tf"><label>Competencia</label><select id="fComp"></select></div>
-      <div class="tf"><label>Indicador</label><select id="fIndicador"></select></div>
+    <div class="top-filters filter-consulta-grid">
+      <div class="tf tf-periodo"><label>Periodo</label><select id="fPeriodo"></select></div>
+      <div class="tf tf-ciclo"><label>Ciclo</label><select id="fCiclo"><option value="">Todos los ciclos</option><option value="1">Primer ciclo (1ro–3ro)</option><option value="2">Segundo ciclo (4to–6to)</option></select></div>
+      <div class="tf tf-grado"><label>Grado</label><select id="fGrado"></select></div>
+      <div class="tf tf-area"><label>Área/asignatura</label><select id="fArea"></select></div>
+      <div class="tf tf-comp"><label>Competencia</label><select id="fComp"></select></div>
+      <div class="tf tf-ind"><label>Indicador</label><select id="fIndicador"></select></div>
+      <div class="filter-actions"><button onclick="resetFilters()" class="secondary top-reset">Limpiar filtros</button></div>
     </div>
   </div>
 </header>
-<div class="layout"><aside><label>Periodo</label><select id="fPeriodo"></select><label>Regional</label><select id="fRegional"></select><label>Distrito</label><select id="fDistrito"></select><label>Centro educativo</label><div class="center-filter"><input id="fCentro" placeholder="Escriba código o nombre" autocomplete="off"><div id="centerSuggest" class="suggestions"></div></div><label>Sector</label><select id="fSector"></select><label>Tipo de centro</label><select id="fTipo"></select><label>Tanda</label><select id="fTanda"></select><div class="buttons"><button onclick="resetFilters()" class="secondary">Limpiar filtros</button><button onclick="exportResumen()" class="secondary">Exportar datos visibles</button></div></aside><main><div class="tabs"><button class="tab active" onclick="showPane('resumen',this)">Resumen</button><button class="tab" onclick="showPane('desempeno',this)">Desempeño</button><button class="tab" onclick="showPane('lectura',this)">Lectura</button><button class="tab" onclick="showPane('evolucion',this)">Evolución</button><button class="tab" onclick="showPane('brechas',this)">Brechas</button><button class="tab" onclick="showPane('matriz',this)">Matriz</button></div>
+<div class="layout"><aside><label>Regional</label><select id="fRegional"></select><label>Distrito</label><select id="fDistrito"></select><label>Centro educativo</label><div class="center-filter"><input id="fCentro" placeholder="Escriba código o nombre" autocomplete="off"><div id="centerSuggest" class="suggestions"></div></div><label>Sector</label><select id="fSector"></select><label>Tipo de centro</label><select id="fTipo"></select><label>Tanda</label><select id="fTanda"></select><div class="buttons"><button onclick="exportResumen()" class="secondary">Exportar datos visibles</button></div></aside><main><div class="tabs"><button class="tab active" onclick="showPane('resumen',this)">Resumen</button><button class="tab" onclick="showPane('desempeno',this)">Desempeño</button><button class="tab" onclick="showPane('lectura',this)">Lectura</button><button class="tab" onclick="showPane('evolucion',this)">Evolución</button><button class="tab" onclick="showPane('brechas',this)">Brechas</button><button class="tab" onclick="showPane('matriz',this)">Matriz</button></div>
 <section id="resumen" class="pane active"><div class="card-block summary-unified"><h3>Resumen general de la evaluación</h3><div class="summary-unified-body"><div class="coverage-layout"><div class="coverage" id="coverageCards"></div><div id="publicGauge" class="gauge-wrap"></div></div><div id="generalIndicators" class="indicator-grid"></div></div></div><div class="grid2"><div class="section chart-card-clean"><h2>Distribución del desempeño por periodo</h2><div class="body"><canvas id="cDist"></canvas></div></div><div class="section chart-card-clean"><h2>Distribución de niveles de lectura por periodo</h2><div class="body"><canvas id="cRead"></canvas></div></div></div></section>
 <section id="desempeno" class="pane"><div class="section"><h2>Desempeño por grado</h2><div class="body"><canvas id="cGrade"></canvas></div></div><div class="section"><h2>Desempeño por área</h2><div class="body"><canvas id="cArea"></canvas></div></div></section>
 <section id="lectura" class="pane"><div class="section"><h2>Niveles de lectura por grado</h2><div class="body"><canvas id="cReadGrade"></canvas></div></div><div class="section"><h2>Tabla de lectura por grado y periodo</h2><div class="body tablewrap"><table id="tLect"></table></div></div></section>
