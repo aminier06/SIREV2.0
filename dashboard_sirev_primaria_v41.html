@@ -1070,6 +1070,68 @@ button.secondary.top-reset{
   .v21-filter-panel .top-filters.filter-consulta-grid{grid-template-columns:1fr!important;}
 }
 
+
+/* v43: botón discreto para limpiar filtros y controles de matriz */
+.dashboard-filter-panel.v21-filter-panel{
+  padding-top:12px!important;
+}
+.filter-clear-btn{
+  position:absolute!important;
+  top:8px!important;
+  right:10px!important;
+  height:22px!important;
+  padding:0 9px!important;
+  border:1px solid #c7d8ea!important;
+  border-radius:999px!important;
+  background:#f7fbff!important;
+  color:#003B71!important;
+  font-size:10.5px!important;
+  font-weight:850!important;
+  letter-spacing:.01em!important;
+  cursor:pointer!important;
+  box-shadow:none!important;
+}
+.filter-clear-btn:hover{
+  background:#edf6ff!important;
+  border-color:#8fb5d8!important;
+}
+.matrix-controls{
+  display:flex;
+  align-items:end;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.matrix-control{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.matrix-control label{
+  margin-top:0!important;
+  color:var(--azul);
+  text-transform:uppercase;
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.06em;
+}
+.matrix-control select,.matrix-control input{
+  height:38px;
+  min-height:38px;
+  border-radius:11px;
+}
+.matrix-view{max-width:210px;}
+.matrix-mode{max-width:210px;}
+.matrix-search{min-width:280px;max-width:360px;}
+.mx-flat.mx-depth-1 .inst{padding-left:0;}
+.mx-flat.mx-depth-2 .inst{padding-left:22px;}
+.mx-flat.mx-depth-3 .inst{padding-left:44px;font-size:11.5px;}
+@media(max-width:720px){
+  .filter-clear-btn{position:static!important;margin-top:7px!important;width:auto!important;justify-self:start!important;}
+  .matrix-controls{align-items:stretch;}
+  .matrix-control,.matrix-control select,.matrix-control input{width:100%;max-width:none;}
+}
+
 </style>
 </head>
 <body>
@@ -1082,6 +1144,7 @@ button.secondary.top-reset{
   </div>
   <div class="dashboard-filter-panel v21-filter-panel" aria-label="Panel de filtros principales">
     <div class="filter-head">Filtros de consulta</div>
+    <button type="button" class="filter-clear-btn" onclick="resetFilters()">Limpiar</button>
     <div class="top-filters filter-consulta-grid">
       <div class="tf tf-periodo"><label>Periodo</label><select id="fPeriodo"></select></div>
       <div class="tf tf-ciclo"><label>Ciclo</label><select id="fCiclo"><option value="">Todos los ciclos</option><option value="1">Primer ciclo (1ro–3ro)</option><option value="2">Segundo ciclo (4to–6to)</option></select></div>
@@ -1098,7 +1161,7 @@ button.secondary.top-reset{
 <section id="lectura" class="pane"><div class="section"><h2>Niveles de lectura por grado</h2><div class="body"><canvas id="cReadGrade"></canvas></div></div><div class="section"><h2>Tabla de lectura por grado y periodo</h2><div class="body tablewrap"><table id="tLect"></table></div></div></section>
 <section id="evolucion" class="pane"><div class="evol-grid"><div class="section"><h2>Evolución del desempeño por periodo</h2><div class="body"><canvas id="cEvolPerf"></canvas></div></div><div class="section"><h2>Evolución de lectura por periodo</h2><div class="body"><canvas id="cEvolRead"></canvas></div></div></div><div class="evol-grid" style="margin-top:16px"><div class="section subtle"><h2>Comparación del desempeño por periodo</h2><div class="body"><canvas id="cEvolPerfH"></canvas></div></div><div class="section subtle"><h2>Comparación de niveles de lectura por periodo</h2><div class="body"><canvas id="cEvolReadH"></canvas></div></div></div></section>
 <section id="brechas" class="pane"><div class="section"><h2>Ranking por regional</h2><div class="body tablewrap"><table id="tReg"></table></div></div><div class="section"><h2>Ranking por distrito</h2><div class="body tablewrap"><table id="tDist"></table></div></div><div class="section"><h2>Ranking por centro educativo</h2><div class="body tablewrap"><table id="tCentro"></table></div></div></section>
-<section id="matriz" class="pane"><div class="section"><h2>Matriz jerárquica Regional → Distrito → Centro</h2><div class="body"><label style="margin-top:0">Tipo de análisis</label><select id="matrixMode" onchange="renderMatrix()" style="max-width:260px"><option value="perf">Desempeño</option><option value="read">Lectura</option></select><input id="matrixSearch" oninput="renderMatrix()" placeholder="Buscar en la matriz" style="max-width:320px;margin-left:8px"><div id="matrix" style="margin-top:12px"></div></div></div></section>
+<section id="matriz" class="pane"><div class="section"><h2>Matriz por regionales, distritos y centros</h2><div class="body"><div class="matrix-controls"><div class="matrix-control matrix-view"><label>Vista</label><select id="matrixView" onchange="renderMatrix()"><option value="regional">Ver regionales</option><option value="distrito">Ver distritos</option><option value="centro">Ver centros</option></select></div><div class="matrix-control matrix-mode"><label>Tipo de análisis</label><select id="matrixMode" onchange="renderMatrix()"><option value="perf">Desempeño</option><option value="read">Lectura</option></select></div><div class="matrix-control matrix-search"><label>Buscar</label><input id="matrixSearch" oninput="renderMatrix()" placeholder="Buscar en la matriz"></div></div><div id="matrix"></div></div></div></section>
 </main></div>
 <script>
 Chart.register(ChartDataLabels);
@@ -1516,9 +1579,12 @@ function renderRanks(){renderRankTable('tReg',0,'Regional');renderRankTable('tDi
 const matrixSortState={col:0,dir:'asc'};
 function matrixAgg(mode){const rows=mode==='perf'?current.perf:current.read, levels=mode==='perf'?['Elemental','Aceptable','Satisfactorio']:readOrder, idxL=mode==='perf'?12:9, idxV=mode==='perf'?13:10; let m={}; for(const r of rows){let path=[idText(r[0]),idText(r[1]),idText(r[2])]; for(let depth=1;depth<=3;depth++){let k=path.slice(0,depth).join('|'); if(!m[k])m[k]={name:path[depth-1],depth,vals:Object.fromEntries(levels.map(l=>[l,0])),children:new Set()}; m[k].vals[idText(r[idxL])] += r[idxV]; if(depth>1)m[path.slice(0,depth-1).join('|')].children.add(k)}} let ev={}; for(const r of current.cov){let path=[idText(r[0]),idText(r[1]),idText(r[2])]; for(let d=1;d<=3;d++){let k=path.slice(0,d).join('|'); ev[k]=(ev[k]||0)+r[10]}} return {m,ev,levels};}
 function matrixMetric(A,k,col){let o=A.m[k]; if(!o)return 0; if(col===0)return o.name||''; if(col===1)return A.ev[k]||0; const tot=Object.values(o.vals).reduce((a,b)=>a+b,0); return pct(o.vals[A.levels[col-2]]||0,tot);}
+function matrixOpenKeys(){return new Set([...document.querySelectorAll('#matrix details.mx[open][data-key]')].map(d=>d.dataset.key));}
 function setMatrixSort(col){if(matrixSortState.col===col)matrixSortState.dir=matrixSortState.dir==='asc'?'desc':'asc';else{matrixSortState.col=col;matrixSortState.dir=col===0?'asc':'desc'}renderMatrix();}
 function sortMatrixKeys(keys,A){const col=matrixSortState.col, dir=matrixSortState.dir; return [...keys].sort((a,b)=>{let va=matrixMetric(A,a,col), vb=matrixMetric(A,b,col); let c=(col===0)?String(va).localeCompare(String(vb),'es',{numeric:true}):(va-vb); return dir==='asc'?c:-c;});}
-function renderMatrix(){const mode=matrixMode.value, q=matrixSearch.value.toLowerCase(), A=matrixAgg(mode), cls=mode==='perf'?'matrix-perf':'matrix-read'; const heads=mode==='perf'?['Institución','Evaluados','% Elemental','% Aceptable','% Satisfactorio']:['Institución','Evaluados',...readOrder]; function cells(k){let o=A.m[k],tot=Object.values(o.vals).reduce((a,b)=>a+b,0);return `<div class="metric"><span class="num">${fmt(A.ev[k]||0)}</span></div>`+A.levels.map(l=>{let p=pct(o.vals[l],tot);return `<div class="metric"><span class="num">${pctf(p)}</span><div class="bar"><div class="fill" style="width:${p}%;background:${lvColor(l)}"></div></div></div>`}).join('')} function node(k){let o=A.m[k]; let child=sortMatrixKeys([...o.children],A).map(node).join(''); let row=`<div class="matrix-row"><div><span class="inst"><span class="inst-name">${o.name}</span></span></div>${cells(k)}</div>`; if(o.depth<3)return `<details class="mx ${o.depth===1?'mx-reg':'mx-dist'}"><summary>${row}</summary>${child}</details>`; return `<div class="mx-center">${row}</div>`} let roots=sortMatrixKeys(Object.keys(A.m).filter(k=>A.m[k].depth===1),A); if(q)roots=roots.filter(k=>k.toLowerCase().includes(q)||[...A.m[k].children].some(c=>c.toLowerCase().includes(q)||[...A.m[c].children].some(cc=>cc.toLowerCase().includes(q)))); const headHtml=heads.map((h,i)=>`<div onclick="setMatrixSort(${i})" title="Ordenar por ${h}">${h}<span class="sortmark ${matrixSortState.col===i?'':'unsorted'}">${matrixSortState.col===i?(matrixSortState.dir==='asc'?'▲':'▼'):'↕'}</span></div>`).join(''); matrix.innerHTML=`<div class="matrix-shell ${cls}"><div class="matrix-row matrix-head">${headHtml}</div>${roots.map(node).join('')}</div>`}
+function matrixMaxDepth(){const v=(document.getElementById('matrixView')||{}).value||'centro'; return v==='regional'?1:(v==='distrito'?2:3);}
+function matrixHasMatch(k,A,q,maxDepth){if(!q)return true; if(k.toLowerCase().includes(q)||(A.m[k]&&String(A.m[k].name||'').toLowerCase().includes(q)))return true; if((A.m[k]&&A.m[k].depth)>=maxDepth)return false; return [...(A.m[k]?.children||[])].some(c=>matrixHasMatch(c,A,q,maxDepth));}
+function renderMatrix(){const mode=matrixMode.value, q=matrixSearch.value.toLowerCase(), maxDepth=matrixMaxDepth(), openKeys=matrixOpenKeys(), A=matrixAgg(mode), cls=mode==='perf'?'matrix-perf':'matrix-read'; const heads=mode==='perf'?['Institución','Evaluados','% Elemental','% Aceptable','% Satisfactorio']:['Institución','Evaluados',...readOrder]; function cells(k){let o=A.m[k],tot=Object.values(o.vals).reduce((a,b)=>a+b,0);return `<div class="metric"><span class="num">${fmt(A.ev[k]||0)}</span></div>`+A.levels.map(l=>{let p=pct(o.vals[l],tot);return `<div class="metric"><span class="num">${pctf(p)}</span><div class="bar"><div class="fill" style="width:${p}%;background:${lvColor(l)}"></div></div></div>`}).join('')} function node(k){let o=A.m[k]; let child=sortMatrixKeys([...o.children].filter(c=>matrixHasMatch(c,A,q,maxDepth)),A).map(node).join(''); let row=`<div class="matrix-row"><div><span class="inst"><span class="inst-name">${o.name}</span></span></div>${cells(k)}</div>`; if(o.depth<maxDepth)return `<details class="mx ${o.depth===1?'mx-reg':'mx-dist'}" data-key="${k.replace(/"/g,'&quot;')}" ${openKeys.has(k)?'open':''}><summary>${row}</summary>${child}</details>`; return `<div class="mx-center mx-flat mx-depth-${o.depth}">${row}</div>`} let roots=sortMatrixKeys(Object.keys(A.m).filter(k=>A.m[k].depth===1),A); if(q)roots=roots.filter(k=>matrixHasMatch(k,A,q,maxDepth)); const headHtml=heads.map((h,i)=>`<div onclick="setMatrixSort(${i})" title="Ordenar por ${h}">${h}<span class="sortmark ${matrixSortState.col===i?'':'unsorted'}">${matrixSortState.col===i?(matrixSortState.dir==='asc'?'▲':'▼'):'↕'}</span></div>`).join(''); const empty=`<div class="chart-empty">No hay datos para la vista seleccionada.</div>`; matrix.innerHTML=`<div class="matrix-shell ${cls}"><div class="matrix-row matrix-head">${headHtml}</div>${roots.length?roots.map(node).join(''):empty}</div>`}
 function resetFilters(){['fRegional','fDistrito','fSector','fTipo','fTanda','fCiclo','fGrado','fArea','fComp','fIndicador'].forEach(id=>document.getElementById(id).value=''); fCentro.value=''; fCentro.dataset.selected=''; selectedPeriod=preferredPeriod()||'__ALL__'; buildPeriodButtons(); rebuildDependentFilters(); apply();}
 function showPane(id,btn){document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');setTimeout(()=>Object.values(charts).forEach(c=>{c.resize();c.update('none');}),120)}
 function csvCell(v){
