@@ -1163,12 +1163,16 @@ details[open]>summary .inst::before{content:'−'!important;background:#003B71;b
 .mx-center .inst{display:inline-flex;}
 
 
-/* v44: Evitar salto de página al abrir/cerrar dependencias en la matriz */
-#matrix, #matrix details, #matrix summary{
-  overflow-anchor:none;
+/* v45: Evitar salto de página al abrir/cerrar dependencias en la matriz */
+html, body, #matrix, #matrix details, #matrix summary{
+  overflow-anchor:none!important;
 }
 #matrix summary{
-  scroll-margin-top:0;
+  scroll-margin-top:0!important;
+  outline:none;
+}
+#matrix summary:focus{
+  outline:none;
 }
 
 </style>
@@ -1626,27 +1630,62 @@ function matrixHasMatch(k,A,q,maxDepth){if(!q)return true; if(k.toLowerCase().in
 function renderMatrix(){const mode=matrixMode.value, q=matrixSearch.value.toLowerCase(), maxDepth=matrixMaxDepth(), openKeys=matrixOpenKeys(), A=matrixAgg(mode), cls=mode==='perf'?'matrix-perf':'matrix-read'; const heads=mode==='perf'?['Institución','Evaluados','% Elemental','% Aceptable','% Satisfactorio']:['Institución','Evaluados',...readOrder]; function cells(k){let o=A.m[k],tot=Object.values(o.vals).reduce((a,b)=>a+b,0);return `<div class="metric"><span class="num">${fmt(A.ev[k]||0)}</span></div>`+A.levels.map(l=>{let p=pct(o.vals[l],tot);return `<div class="metric"><span class="num">${pctf(p)}</span><div class="bar"><div class="fill" style="width:${p}%;background:${lvColor(l)}"></div></div></div>`}).join('')} function node(k){let o=A.m[k]; let child=sortMatrixKeys([...o.children].filter(c=>matrixHasMatch(c,A,q,maxDepth)),A).map(node).join(''); let row=`<div class="matrix-row"><div><span class="inst"><span class="inst-name">${o.name}</span></span></div>${cells(k)}</div>`; if(o.depth<maxDepth)return `<details class="mx ${o.depth===1?'mx-reg':'mx-dist'}" data-key="${k.replace(/"/g,'&quot;')}" ${openKeys.has(k)?'open':''}><summary>${row}</summary>${child}</details>`; return `<div class="mx-center mx-flat mx-depth-${o.depth}">${row}</div>`} let roots=sortMatrixKeys(Object.keys(A.m).filter(k=>A.m[k].depth===1),A); if(q)roots=roots.filter(k=>matrixHasMatch(k,A,q,maxDepth)); const headHtml=heads.map((h,i)=>`<div onclick="setMatrixSort(${i})" title="Ordenar por ${h}">${h}<span class="sortmark ${matrixSortState.col===i?'':'unsorted'}">${matrixSortState.col===i?(matrixSortState.dir==='asc'?'▲':'▼'):'↕'}</span></div>`).join(''); const empty=`<div class="chart-empty">No hay datos para la vista seleccionada.</div>`; matrix.innerHTML=`<div class="matrix-shell ${cls}"><div class="matrix-row matrix-head">${headHtml}</div>${roots.length?roots.map(node).join(''):empty}</div>`}
 
 
-/* v44: Mantener la posición vertical al desplegar/contraer la matriz */
+/* v45: Mantener la posición vertical al desplegar/contraer la matriz sin saltos intermitentes */
 (function(){
-  function restoreViewport(x,y){
-    window.scrollTo(x,y);
-    requestAnimationFrame(function(){ window.scrollTo(x,y); });
-    setTimeout(function(){ window.scrollTo(x,y); }, 40);
+  let suppressNextClick = false;
+
+  function restoreScroll(x, y){
+    const go = function(){ window.scrollTo(x, y); };
+    go();
+    requestAnimationFrame(function(){
+      go();
+      requestAnimationFrame(go);
+    });
+    setTimeout(go, 20);
+    setTimeout(go, 80);
+    setTimeout(go, 180);
   }
 
+  function toggleMatrixDetails(summary){
+    const details = summary && summary.parentElement;
+    if(!details || !details.matches('details.mx')) return;
+
+    const x = window.scrollX;
+    const y = window.scrollY;
+
+    details.open = !details.open;
+
+    if(document.activeElement && document.activeElement.blur){
+      document.activeElement.blur();
+    }
+
+    restoreScroll(x, y);
+  }
+
+  document.addEventListener('pointerdown', function(e){
+    const summary = e.target.closest && e.target.closest('#matrix details.mx > summary');
+    if(!summary) return;
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    suppressNextClick = true;
+    toggleMatrixDetails(summary);
+  }, true);
+
   document.addEventListener('click', function(e){
-    const summary = e.target.closest('#matrix details.mx > summary');
+    const summary = e.target.closest && e.target.closest('#matrix details.mx > summary');
     if(!summary) return;
 
     e.preventDefault();
     e.stopPropagation();
 
-    const details = summary.parentElement;
-    const x = window.scrollX;
-    const y = window.scrollY;
+    if(suppressNextClick){
+      suppressNextClick = false;
+      return;
+    }
 
-    details.open = !details.open;
-    restoreViewport(x,y);
+    toggleMatrixDetails(summary);
   }, true);
 
   document.addEventListener('keydown', function(e){
@@ -1656,13 +1695,7 @@ function renderMatrix(){const mode=matrixMode.value, q=matrixSearch.value.toLowe
 
     e.preventDefault();
     e.stopPropagation();
-
-    const details = summary.parentElement;
-    const x = window.scrollX;
-    const y = window.scrollY;
-
-    details.open = !details.open;
-    restoreViewport(x,y);
+    toggleMatrixDetails(summary);
   }, true);
 })();
 
