@@ -1162,6 +1162,15 @@ details[open]>summary .inst::before{content:'−'!important;background:#003B71;b
 .mx-center .inst::before{content:''!important;display:none!important;}
 .mx-center .inst{display:inline-flex;}
 
+
+/* v44: Evitar salto de página al abrir/cerrar dependencias en la matriz */
+#matrix, #matrix details, #matrix summary{
+  overflow-anchor:none;
+}
+#matrix summary{
+  scroll-margin-top:0;
+}
+
 </style>
 </head>
 <body>
@@ -1615,6 +1624,48 @@ function sortMatrixKeys(keys,A){const col=matrixSortState.col, dir=matrixSortSta
 function matrixMaxDepth(){return 3;}
 function matrixHasMatch(k,A,q,maxDepth){if(!q)return true; if(k.toLowerCase().includes(q)||(A.m[k]&&String(A.m[k].name||'').toLowerCase().includes(q)))return true; if((A.m[k]&&A.m[k].depth)>=maxDepth)return false; return [...(A.m[k]?.children||[])].some(c=>matrixHasMatch(c,A,q,maxDepth));}
 function renderMatrix(){const mode=matrixMode.value, q=matrixSearch.value.toLowerCase(), maxDepth=matrixMaxDepth(), openKeys=matrixOpenKeys(), A=matrixAgg(mode), cls=mode==='perf'?'matrix-perf':'matrix-read'; const heads=mode==='perf'?['Institución','Evaluados','% Elemental','% Aceptable','% Satisfactorio']:['Institución','Evaluados',...readOrder]; function cells(k){let o=A.m[k],tot=Object.values(o.vals).reduce((a,b)=>a+b,0);return `<div class="metric"><span class="num">${fmt(A.ev[k]||0)}</span></div>`+A.levels.map(l=>{let p=pct(o.vals[l],tot);return `<div class="metric"><span class="num">${pctf(p)}</span><div class="bar"><div class="fill" style="width:${p}%;background:${lvColor(l)}"></div></div></div>`}).join('')} function node(k){let o=A.m[k]; let child=sortMatrixKeys([...o.children].filter(c=>matrixHasMatch(c,A,q,maxDepth)),A).map(node).join(''); let row=`<div class="matrix-row"><div><span class="inst"><span class="inst-name">${o.name}</span></span></div>${cells(k)}</div>`; if(o.depth<maxDepth)return `<details class="mx ${o.depth===1?'mx-reg':'mx-dist'}" data-key="${k.replace(/"/g,'&quot;')}" ${openKeys.has(k)?'open':''}><summary>${row}</summary>${child}</details>`; return `<div class="mx-center mx-flat mx-depth-${o.depth}">${row}</div>`} let roots=sortMatrixKeys(Object.keys(A.m).filter(k=>A.m[k].depth===1),A); if(q)roots=roots.filter(k=>matrixHasMatch(k,A,q,maxDepth)); const headHtml=heads.map((h,i)=>`<div onclick="setMatrixSort(${i})" title="Ordenar por ${h}">${h}<span class="sortmark ${matrixSortState.col===i?'':'unsorted'}">${matrixSortState.col===i?(matrixSortState.dir==='asc'?'▲':'▼'):'↕'}</span></div>`).join(''); const empty=`<div class="chart-empty">No hay datos para la vista seleccionada.</div>`; matrix.innerHTML=`<div class="matrix-shell ${cls}"><div class="matrix-row matrix-head">${headHtml}</div>${roots.length?roots.map(node).join(''):empty}</div>`}
+
+
+/* v44: Mantener la posición vertical al desplegar/contraer la matriz */
+(function(){
+  function restoreViewport(x,y){
+    window.scrollTo(x,y);
+    requestAnimationFrame(function(){ window.scrollTo(x,y); });
+    setTimeout(function(){ window.scrollTo(x,y); }, 40);
+  }
+
+  document.addEventListener('click', function(e){
+    const summary = e.target.closest('#matrix details.mx > summary');
+    if(!summary) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const details = summary.parentElement;
+    const x = window.scrollX;
+    const y = window.scrollY;
+
+    details.open = !details.open;
+    restoreViewport(x,y);
+  }, true);
+
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    const summary = e.target.closest && e.target.closest('#matrix details.mx > summary');
+    if(!summary) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const details = summary.parentElement;
+    const x = window.scrollX;
+    const y = window.scrollY;
+
+    details.open = !details.open;
+    restoreViewport(x,y);
+  }, true);
+})();
+
 function resetFilters(){['fRegional','fDistrito','fSector','fTipo','fTanda','fCiclo','fGrado','fArea','fComp','fIndicador'].forEach(id=>document.getElementById(id).value=''); fCentro.value=''; fCentro.dataset.selected=''; selectedPeriod=preferredPeriod()||'__ALL__'; buildPeriodButtons(); rebuildDependentFilters(); apply();}
 function showPane(id,btn){document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');setTimeout(()=>Object.values(charts).forEach(c=>{c.resize();c.update('none');}),120)}
 function csvCell(v){
