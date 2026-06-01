@@ -853,6 +853,104 @@ button.secondary.top-reset:hover{background:#e4f1ff!important;border-color:#7ea9
   .filter-head::after{display:none!important;}
 }
 
+
+
+/* v44: distribución compacta y proporcionada de filtros */
+.dashboard-filter-panel.v21-filter-panel{
+  width:fit-content!important;
+  max-width:calc(100vw - 70px)!important;
+  padding:10px 12px 11px!important;
+  border-radius:16px!important;
+  background:rgba(255,255,255,.88)!important;
+  box-shadow:0 6px 16px rgba(0,59,113,.06)!important;
+}
+.filter-head{
+  margin:0 0 8px!important;
+  font-size:10px!important;
+  letter-spacing:.08em!important;
+}
+.filter-head::after{
+  max-width:120px!important;
+}
+.v21-filter-panel .top-filters.filter-consulta-grid{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:8px 10px!important;
+  align-items:flex-end!important;
+  max-width:1320px!important;
+}
+.filter-consulta-grid .tf,
+.filter-consulta-grid .filter-actions{
+  grid-column:auto!important;
+  flex:0 0 auto!important;
+}
+.filter-consulta-grid .tf-periodo{width:130px!important;}
+.filter-consulta-grid .tf-ciclo{width:160px!important;}
+.filter-consulta-grid .tf-grado{width:160px!important;}
+.filter-consulta-grid .tf-area{width:230px!important;}
+.filter-consulta-grid .tf-comp{width:285px!important;}
+.filter-consulta-grid .tf-ind{width:300px!important;}
+.filter-consulta-grid .filter-actions{
+  width:auto!important;
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:flex-start!important;
+}
+.v21-filter-panel .tf label{
+  font-size:9px!important;
+  margin-bottom:3px!important;
+}
+.v21-filter-panel select{
+  min-height:34px!important;
+  height:34px!important;
+  border-radius:10px!important;
+  padding:6px 29px 6px 10px!important;
+  font-size:12.8px!important;
+  box-shadow:none!important;
+}
+button.secondary.top-reset{
+  width:auto!important;
+  min-width:112px!important;
+  max-width:122px!important;
+  min-height:34px!important;
+  height:34px!important;
+  padding:6px 10px!important;
+  border-radius:10px!important;
+  font-size:12.3px!important;
+  box-shadow:none!important;
+}
+.dash-header.v21-header{
+  padding:14px 24px 15px!important;
+}
+.v21-header .dash-brand h1{
+  font-size:clamp(22px,1.9vw,30px)!important;
+}
+.v21-header .brand-sub{
+  font-size:12.5px!important;
+  margin-top:4px!important;
+}
+@media(max-width:900px){
+  .dashboard-filter-panel.v21-filter-panel{width:100%!important;max-width:100%!important;}
+  .filter-consulta-grid .tf-periodo,
+  .filter-consulta-grid .tf-ciclo,
+  .filter-consulta-grid .tf-grado{width:calc(33.333% - 7px)!important;}
+  .filter-consulta-grid .tf-area{width:calc(50% - 5px)!important;}
+  .filter-consulta-grid .tf-comp,
+  .filter-consulta-grid .tf-ind{width:calc(50% - 5px)!important;}
+  .filter-consulta-grid .filter-actions{width:auto!important;}
+}
+@media(max-width:620px){
+  .dashboard-filter-panel.v21-filter-panel{max-width:100%!important;}
+  .filter-consulta-grid .tf-periodo,
+  .filter-consulta-grid .tf-ciclo,
+  .filter-consulta-grid .tf-grado,
+  .filter-consulta-grid .tf-area,
+  .filter-consulta-grid .tf-comp,
+  .filter-consulta-grid .tf-ind{width:100%!important;}
+  button.secondary.top-reset{width:100%!important;max-width:none!important;}
+  .filter-consulta-grid .filter-actions{width:100%!important;}
+}
+
 </style>
 </head>
 <body>
