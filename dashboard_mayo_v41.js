@@ -458,9 +458,10 @@
     try {
       if (typeof selectedPeriod !== 'undefined') {
         const av = typeof availablePeriods === 'function' ? availablePeriods() : [];
-        if (!selectedPeriod || (selectedPeriod !== '__ALL__' && !av.includes(selectedPeriod))) {
-          selectedPeriod = av.includes('Mayo') ? 'Mayo' : (av[av.length - 1] || '__ALL__');
-        }
+        // Al finalizar la inyección de mayo, dejar Mayo como periodo predeterminado
+        // en la carga inicial del dashboard. Antes aparecía Marzo porque init() corría
+        // antes de que los CSV de mayo terminaran de integrarse.
+        selectedPeriod = av.includes('Mayo') ? 'Mayo' : (av[av.length - 1] || '__ALL__');
       }
       if (typeof buildPeriodButtons === 'function') buildPeriodButtons();
       if (typeof rebuildGradoOptions === 'function') rebuildGradoOptions();
@@ -480,5 +481,5 @@
     setTimeout(integrarMayo, 0);
   }
 
-  console.info('[SIREV Mayo] Módulo v5 registrado.');
+  console.info('[SIREV Mayo] Módulo v6 registrado.');
 })();
