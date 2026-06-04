@@ -17,7 +17,7 @@
 <script src="dashboard_data_ind_v41_part2.js?v=41"></script>
 <script src="dashboard_data_ind_v41_part3.js?v=41"></script>
 <script src="dashboard_data_ind_v41_part4.js?v=41"></script>
-<script src="dashboard_mayo_v41.js?v=41"></script>
+<script src="dashboard_mayo_v41.js?v=42"></script>
 <style>
 :root{--azul:#003B71;--azul2:#005DAA;--rojo:#1E96F2;--dorado:#20279A;--verde:#E8693B;--cyan:#790987;--fondo:#f3f7fc;--panel:#fff;--borde:#c8d8ea;--texto:#10233f;--muted:#53657d;--shadow:0 12px 28px rgba(0,59,113,.10);--r:18px}
 *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#f9fcff 0%,#eef4fb 100%);color:var(--texto);font-family:Segoe UI,Arial,sans-serif;font-size:14px;line-height:1.45} button,select,input{font-family:inherit} header{position:relative;z-index:30;background:linear-gradient(135deg,#fff 0%,#f4f8ff 52%,#e6f0fb 100%);border-bottom:4px solid var(--azul);box-shadow:0 10px 28px rgba(0,59,113,.13);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}.title h1{margin:0;color:var(--azul);font-size:22px;line-height:1.1}.sub{font-size:13px;color:#49627f;margin-top:3px}.top-filters{display:grid;grid-template-columns:repeat(2,minmax(190px,1fr));gap:8px 12px;min-width:440px}.tf label, aside label{display:block;color:var(--azul);text-transform:uppercase;font-size:10px;font-weight:800;letter-spacing:.06em;margin-bottom:4px}select,input{width:100%;background:#fff;color:var(--texto);border:1px solid #b8cce2;border-radius:12px;padding:9px 11px;outline:none}select:focus,input:focus{border-color:var(--azul2);box-shadow:0 0 0 3px rgba(0,93,170,.15)}.layout{display:grid;grid-template-columns:285px minmax(0,1fr);min-height:calc(100vh - 78px)}aside{position:relative;top:auto;height:auto;overflow:visible;background:linear-gradient(180deg,#fff,#f0f6fd);border-right:1px solid var(--borde);box-shadow:8px 0 22px rgba(0,59,113,.06);padding:18px 14px}aside label{margin-top:14px}.center-filter{position:relative}.suggestions{display:none;position:absolute;left:0;right:0;top:100%;z-index:50;background:#fff;border:1px solid var(--borde);border-radius:12px;box-shadow:0 12px 28px rgba(0,59,113,.18);max-height:260px;overflow:auto}.suggestions.open{display:block}.suggestion{padding:9px 10px;border-bottom:1px solid #d8e4f1;cursor:pointer}.suggestion:hover{background:#eef4fb}.suggestion b{color:var(--azul)}.suggestion small{display:block;color:var(--muted);margin-top:2px}main{padding:18px;min-width:0}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;position:static;z-index:20;background:linear-gradient(180deg,rgba(243,247,252,.98),rgba(243,247,252,.86));padding:8px 0}.tab{background:#fff;border:1px solid var(--borde);color:#31516f;border-radius:14px;padding:10px 16px;font-weight:800;cursor:pointer;box-shadow:0 6px 16px rgba(0,59,113,.08)}.tab.active{background:linear-gradient(135deg,var(--azul),var(--azul2));color:#fff;border-color:var(--azul)}.pane{display:none}.pane.active{display:block}.section,.card-block{background:#fff;border:1px solid var(--borde);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden}.section h2,.card-block h3{margin:0;background:linear-gradient(90deg,var(--azul),var(--azul2));color:#fff;padding:13px 16px;font-size:15px}.body{padding:12px 14px 10px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.coverage{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;padding:14px}.cov-card{background:linear-gradient(145deg,#fff,#f4f8ff);border:1px solid var(--borde);border-radius:16px;padding:14px 16px;min-height:88px;border-left:5px solid var(--azul)}.cov-card small{display:block;color:var(--azul);text-transform:uppercase;font-size:11px;font-weight:850;margin-bottom:6px}.cov-card .val{font-size:27px;font-weight:900;color:var(--azul);line-height:1.05}.cov-card .det{font-size:12px;color:var(--muted);margin-top:6px}.donut-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}canvas{max-width:100%;height:250px!important;display:block}.donut-row canvas{height:240px!important}.chart-empty{padding:28px;text-align:center;color:var(--muted);font-weight:700}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 10px;border-bottom:1px solid #d8e4f1;text-align:left;white-space:nowrap}th{position:sticky;top:0;background:var(--azul);color:#fff;text-transform:uppercase;font-size:11px;z-index:1}tr:hover td{background:#eef4fb}.tablewrap{max-height:560px;overflow:auto}.right{text-align:center}.red{color:var(--rojo)}.amber{color:var(--dorado)}.green{color:var(--verde)}.cyan{color:var(--cyan)}.buttons{display:grid;gap:9px;margin-top:16px}button.secondary{background:#fff;border:1px solid var(--borde);color:var(--azul);border-radius:12px;padding:10px 13px;font-weight:800;cursor:pointer}.loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f3f7fc;z-index:2000;color:var(--azul);font-size:18px;font-weight:800}.matrix-shell{width:100%;overflow-x:hidden;border:1px solid var(--borde);border-radius:16px;background:#fff}.matrix-row{display:grid;align-items:stretch;border-bottom:1px solid #d8e4f1}.matrix-perf .matrix-row{grid-template-columns:minmax(280px,1.7fr) minmax(110px,.7fr) repeat(3,minmax(110px,.6fr))}.matrix-read .matrix-row{grid-template-columns:minmax(230px,1.5fr) minmax(90px,.55fr) repeat(5,minmax(82px,.5fr))}.matrix-row>div{padding:9px 10px;border-left:1px solid #d8e4f1;min-width:0;overflow:hidden;text-overflow:ellipsis}.matrix-row>div:first-child{border-left:0}.matrix-head{background:var(--azul);color:#fff;font-size:10px;text-transform:uppercase;font-weight:850}.matrix-head>div{cursor:pointer;user-select:none;align-items:center;gap:6px}.matrix-head>div:hover{background:#0064ad}.matrix-head .sortmark{font-size:10px;margin-left:4px;opacity:.9}.matrix-head .unsorted{opacity:.45}.mx{margin:0;border:0}.mx summary{list-style:none;cursor:pointer}.mx summary::-webkit-details-marker{display:none}.mx-reg>summary{background:#e4effa;color:var(--azul);font-weight:850}.mx-dist>summary{background:#f4f8ff;color:#1b385f;font-weight:760}.mx-center{background:#fff;color:var(--texto)}.inst:before{content:'▸';margin-right:6px;color:var(--azul)}details[open]>summary .inst:before{content:'▾'}.mx-center .inst:before{content:''}.mx-dist .inst{padding-left:22px}.mx-center .inst{padding-left:44px;font-size:11.5px}.metric{text-align:right}.metric .num{font-weight:850;color:var(--azul)}.bar{height:6px;background:#d6e3f2;border-radius:999px;overflow:hidden;margin-top:4px}.fill{height:100%;border-radius:999px}.status{border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;min-width:112px}.high{background:rgba(46,125,50,.13);color:var(--verde)}.mid{background:rgba(242,169,0,.18);color:#8a6100}.low{background:rgba(200,16,46,.12);color:var(--rojo)}.note{font-size:12px;color:var(--muted);margin:6px 0 14px}@media(max-width:980px){header{display:block}.top-filters{min-width:0;margin-top:12px}.layout{grid-template-columns:1fr}aside{position:relative;top:0;height:auto}.grid2,.donut-row{grid-template-columns:1fr}.coverage{grid-template-columns:repeat(2,minmax(0,1fr))}.tabs{position:static}.matrix-read .matrix-row{grid-template-columns:minmax(180px,1.4fr) minmax(70px,.5fr) repeat(5,minmax(65px,.45fr));font-size:11px}}
@@ -1778,138 +1778,11 @@ function exportResumen(){
   for(let i=1;i<rows.length;i++) if(!rows[i][11]) rows[i][11]=ftxt;
   downloadCSV('sirev_datos_visibles_filtrados.csv',rows);
 }
-/* ── INTEGRACIÓN MAYO ─────────────────────────────────────────────────── */
-(function(){
-  const U1='https://docs.google.com/spreadsheets/d/e/2PACX-1vSgWQ4GaAwm8gCAkOUU47IM_M0EneHHDg774yY1QfmuZeXyV0VXFJfeO752SP0yhDfVNCvZILpLpHTc/pub?output=csv';
-  const U2='https://docs.google.com/spreadsheets/d/e/2PACX-1vSE7lqSqf1Ugps--yciQGl9iXDwcuRXq7DmPolyClxNqtILprSaixafW7j_gFOq_tmePtoY-hpUj6XH/pub?output=csv';
-  const AMAP={'LE':'Lengua Española','LT':'Lengua Española','MA':'Matemática','CS':'Ciencias Sociales','CN':'Ciencias de la Naturaleza'};
-  const RMAP={'N1':'Lector de imágenes','N2':'Lector de sílabas','N3':'Lector de palabras','N4':'Lector no fluido','N5':'Lector fluido'};
-  const PMAP={'E':'Elemental','A':'Aceptable','S':'Satisfactorio'};
-
-  function parseCsv(txt){
-    const lines=txt.trim().split(/\r?\n/),res=[];
-    for(const ln of lines){
-      const row=[];let cur='',inq=false;
-      for(let i=0;i<ln.length;i++){
-        const c=ln[i];
-        if(c==='"'){if(inq&&ln[i+1]==='"'){cur+='"';i++;}else inq=!inq;}
-        else if(c===','&&!inq){row.push(cur.trim());cur='';}
-        else cur+=c;
-      }
-      row.push(cur.trim());res.push(row);
-    }
-    return res;
-  }
-
-  function phdr(h){
-    h=h.trim();const hl=h.toLowerCase();
-    if(hl==='código sigerd'||hl==='codigo sigerd')return{t:'meta',k:'sigerd'};
-    if(hl==='regional')return{t:'meta',k:'regional'};
-    if(hl==='distrito educativo')return{t:'meta',k:'distrito'};
-    if(hl==='centro educativo')return{t:'meta',k:'centro'};
-    if(hl==='sector')return{t:'meta',k:'sector'};
-    if(hl==='tipo de centro')return{t:'meta',k:'tipo'};
-    if(hl==='tanda')return{t:'meta',k:'tanda'};
-    if(hl==='periodo')return{t:'periodo'};
-    let m=h.match(/^Matr[ií]cula\s+(\d)/i);if(m)return{t:'mat',g:+m[1]};
-    m=h.match(/^EVALUADOS\s+(\d)/i);if(m)return{t:'ev',g:+m[1]};
-    m=h.match(/-(N\d)\s*\(/);if(m&&/^G\d-LT-N/i.test(h)){
-      const g2=+h[1];return{t:'read',g:g2,lv:RMAP[m[1]]||m[1]};
-    }
-    const pm=h.match(/\(([EAS])\)\s*$/);
-    if(pm){
-      const g3=+h[1],ac=(h.match(/^G\d-([A-Z]+)-/)||[])[1],ic=(h.match(/-(IND[\d.]+)\s*\(/)||[])[1];
-      if(g3&&ac&&ic){const cm2=ic.match(/IND(\d)/);return{t:'perf',g:g3,area:AMAP[ac]||ac,comp:cm2?'Competencia '+cm2[1]:ic,ind:ic,lv:PMAP[pm[1]]};}
-    }
-    return{t:'x'};
-  }
-
-  function procesar(rows){
-    if(rows.length<2)return{cov:[],pb:[],pc:[],pi:[],rd:[]};
-    const hdrs=rows[0].map(phdr),data=rows.slice(1).filter(r=>r.some(v=>v!==''));
-    const cov=[],pb=[],pc=[],pi=[],rd=[];
-    for(const row of data){
-      const meta={};
-      for(let i=0;i<hdrs.length;i++){
-        if(hdrs[i].t==='meta')meta[hdrs[i].k]=row[i]||'';
-        if(hdrs[i].t==='periodo')meta.p=row[i]||'Mayo';
-      }
-      const per=meta.p||'Mayo',reg=meta.regional||'',dis=meta.distrito||'';
-      const cen=meta.centro||'',sec=meta.sector||'',tip=meta.tipo||'',tan=meta.tanda||'';
-      // cobertura
-      const grades=new Set();
-      for(const h of hdrs)if((h.t==='mat'||h.t==='ev')&&h.g)grades.add(h.g);
-      for(const g of grades){
-        let mat=0,ev=0;
-        for(let i=0;i<hdrs.length;i++){
-          const v=parseFloat(row[i])||0;
-          if(hdrs[i].t==='mat'&&hdrs[i].g===g)mat+=v;
-          if(hdrs[i].t==='ev'&&hdrs[i].g===g)ev+=v;
-        }
-        if(mat>0||ev>0)cov.push([reg,dis,cen,sec,tip,tan,per,g,'',mat,ev]);
-      }
-      // lectura
-      const rm={};
-      for(let i=0;i<hdrs.length;i++){
-        const h=hdrs[i];if(h.t==='read'){const k=h.g+'|'+h.lv;rm[k]=(rm[k]||0)+(parseFloat(row[i])||0);}
-      }
-      for(const[k,v]of Object.entries(rm)){
-        if(!v)continue;const[gs,lv]=k.split('|');
-        rd.push([reg,dis,cen,sec,tip,tan,per,+gs,'',lv,v]);
-      }
-      // desempeño
-      const bm={},cm={},im={};
-      for(let i=0;i<hdrs.length;i++){
-        const h=hdrs[i];if(h.t!=='perf')continue;
-        const v=parseFloat(row[i])||0;if(!v)continue;
-        const kb=[h.g,h.area,h.lv].join('|');bm[kb]=(bm[kb]||0)+v;
-        const kc=[h.g,h.area,h.comp,h.lv].join('|');cm[kc]=(cm[kc]||0)+v;
-        const ki=[h.g,h.area,h.comp,h.ind,h.lv].join('|');im[ki]=(im[ki]||0)+v;
-      }
-      for(const[k,v]of Object.entries(bm)){const[g,a,l]=k.split('|');pb.push([reg,dis,cen,sec,tip,tan,per,+g,'',a,'','',l,v]);}
-      for(const[k,v]of Object.entries(cm)){const[g,a,c,l]=k.split('|');pc.push([reg,dis,cen,sec,tip,tan,per,+g,'',a,c,'',l,v]);}
-      for(const[k,v]of Object.entries(im)){const[g,a,c,ind,l]=k.split('|');pi.push([reg,dis,cen,sec,tip,tan,per,+g,'',a,c,ind,l,v]);}
-    }
-    return{cov,pb,pc,pi,rd};
-  }
-
-  async function cargarMayo(){
-    try{
-      const[r1,r2]=await Promise.all([fetch(U1),fetch(U2)]);
-      const[t1,t2]=await Promise.all([r1.text(),r2.text()]);
-      const p1=procesar(parseCsv(t1)),p2=procesar(parseCsv(t2));
-      const cov=[...p1.cov,...p2.cov],pb=[...p1.pb,...p2.pb];
-      const pc=[...p1.pc,...p2.pc],pi=[...p1.pi,...p2.pi],rd=[...p1.rd,...p2.rd];
-      if(!cov.length&&!pb.length){console.warn('[Mayo] Sin datos');return;}
-      // Inyectar en los arrays existentes (misma referencia que usan las funciones)
-      PERF_BASE.push(...pb);
-      PERF_COMP.push(...pc);
-      READ.push(...rd);
-      COV.push(...cov);
-      // PERF_IND bajo demanda
-      window._MAYO_PI=pi;
-      const _ei=ensureIndLoaded;
-      ensureIndLoaded=function(){
-        const ok=_ei();
-        if(ok&&window._MAYO_PI&&window._MAYO_PI.length){PERF_IND.push(...window._MAYO_PI);window._MAYO_PI=[];}
-        return ok;
-      };
-      console.info('[Mayo] Inyectados — COV:'+cov.length+' PerfBase:'+pb.length+' Read:'+rd.length);
-      selectedPeriod=preferredPeriod()||selectedPeriod||'__ALL__'; buildPeriodButtons();setupFilters();apply();
-    }catch(e){console.warn('[Mayo] Error:',e.message);}
-  }
-
-  // Esperar a que loadData termine antes de inyectar
-  const _ld=loadData;
-  loadData=async function(){
-    _ld();
-    // Esperar a que DATA esté listo (loadData es síncrono pero el DOM tarda un tick)
-    await new Promise(r=>setTimeout(r,0));
-    if(typeof DATA!=='undefined'&&DATA&&DATA.cov)await cargarMayo();
-    else console.warn('[Mayo] DATA no disponible tras loadData');
-  };
-})();
-/* ── FIN INTEGRACIÓN MAYO ─────────────────────────────────────────────── */
+/* ── CORRECCIÓN MAYO ───────────────────────────────────────────────────
+   Se eliminó la integración interna duplicada de mayo.
+   Mayo queda gestionado únicamente por dashboard_mayo_v41.js?v=42,
+   evitando el error: Maximum call stack size exceeded.
+   ───────────────────────────────────────────────────────────────────── */
 
 window.addEventListener('load',loadData);
 </script>
