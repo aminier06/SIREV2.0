@@ -1341,15 +1341,20 @@ function setSelectIfOption(selectEl,value){
 }
 function syncFiltersToSelectedCenter(centerValue){
   const currentFilters = filters();
-  const rows = COV.filter(r=>idText(r[2])===centerValue);
+  const rows = COV.filter(r => idText(r[2]) === centerValue);
   if(!rows.length) return;
-  // Preferimos una fila compatible con el periodo ya seleccionado, si existe.
-  let row = rows.find(r=>!currentFilters.p || idText(r[6])===currentFilters.p) || rows[0];
-  setSelectIfOption(fRegional,idText(row[0]));
-  setSelectIfOption(fDistrito,idText(row[1]));
-  setSelectIfOption(fSector,idText(row[3]));
-  setSelectIfOption(fTipo,idText(row[4]));
-  setSelectIfOption(fTanda,idText(row[5]));
+
+  const selectedPeriods = currentFilters.periods || [];
+  const row = rows.find(r => selectedPeriods.includes(idText(r[6]))) || rows[0];
+
+  setSelectIfOption(fRegional, idText(row[0]));
+  setSelectIfOption(fDistrito, idText(row[1]));
+
+  // No sincronizar automáticamente estos filtros al seleccionar centro.
+  // Sector, tipo de centro y tanda pueden variar entre periodos y dejar resultados en cero.
+  if(fSector) fSector.value = '';
+  if(fTipo) fTipo.value = '';
+  if(fTanda) fTanda.value = '';
 }
 function selectCenter(centerValue){
   fCentro.value=centerValue;
