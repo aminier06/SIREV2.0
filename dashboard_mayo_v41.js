@@ -1,5 +1,5 @@
 /*
- * dashboard_mayo_v41.js — v4 corregido
+ * dashboard_mayo_v41.js — v5 corregido
  * Carga los CSV publicados de mayo, espera a que el dashboard haya terminado
  * loadData()/init(), inyecta los registros en los arreglos ya existentes y
  * reconstruye los filtros sin envolver apply() ni provocar recursión.
@@ -352,6 +352,15 @@
     }
   }
 
+
+
+  function appendRows(target, rows) {
+    if (!Array.isArray(target) || !Array.isArray(rows) || !rows.length) return;
+    // Evita RangeError: Maximum call stack size exceeded por usar push(...rows)
+    // cuando el CSV de mayo genera muchos registros.
+    for (let i = 0; i < rows.length; i++) target.push(rows[i]);
+  }
+
   function syncDashboardArrays(data) {
     try {
       PERF_BASE = data.perf_base;
@@ -389,11 +398,11 @@
       fetchCiclo(URL_CICLO2, 2)
     ]);
 
-    const covRows = [...p1.covRows, ...p2.covRows];
-    const perfBaseRows = [...p1.perfBaseRows, ...p2.perfBaseRows];
-    const perfCompRows = [...p1.perfCompRows, ...p2.perfCompRows];
-    const perfIndRows = [...p1.perfIndRows, ...p2.perfIndRows];
-    const readRows = [...p1.readRows, ...p2.readRows];
+    const covRows = p1.covRows.concat(p2.covRows);
+    const perfBaseRows = p1.perfBaseRows.concat(p2.perfBaseRows);
+    const perfCompRows = p1.perfCompRows.concat(p2.perfCompRows);
+    const perfIndRows = p1.perfIndRows.concat(p2.perfIndRows);
+    const readRows = p1.readRows.concat(p2.readRows);
 
     if (!covRows.length && !perfBaseRows.length && !readRows.length) {
       console.warn('[SIREV Mayo] CSVs vacíos o sin datos válidos.');
@@ -403,10 +412,10 @@
 
     removePreviousMayo(data);
 
-    data.perf_base.push(...perfBaseRows);
-    data.perf_comp.push(...perfCompRows);
-    data.read.push(...readRows);
-    data.cov.push(...covRows);
+    appendRows(data.perf_base, perfBaseRows);
+    appendRows(data.perf_comp, perfCompRows);
+    appendRows(data.read, readRows);
+    appendRows(data.cov, covRows);
     syncDashboardArrays(data);
 
     // PERF_IND se carga bajo demanda. Si ya existe, agregamos mayo; si no, lo guardamos pendiente.
@@ -417,7 +426,7 @@
           return p !== 'Mayo';
         };
         PERF_IND = PERF_IND.filter(notMayoByPeriod);
-        PERF_IND.push(...perfIndRows);
+        appendRows(PERF_IND, perfIndRows);
       } else {
         window.__SIREV_MAYO_PERF_IND_PENDING__ = perfIndRows;
         if (!window.__SIREV_MAYO_PATCHED_ENSURE__) {
@@ -429,7 +438,7 @@
                 if (ok && Array.isArray(PERF_IND) && window.__SIREV_MAYO_PERF_IND_PENDING__ && window.__SIREV_MAYO_PERF_IND_PENDING__.length) {
                   const pending = window.__SIREV_MAYO_PERF_IND_PENDING__;
                   window.__SIREV_MAYO_PERF_IND_PENDING__ = [];
-                  PERF_IND.push(...pending);
+                  appendRows(PERF_IND, pending);
                 }
               } catch (e) {
                 console.warn('[SIREV Mayo] No se pudo anexar detalle de indicadores:', e.message);
@@ -471,5 +480,5 @@
     setTimeout(integrarMayo, 0);
   }
 
-  console.info('[SIREV Mayo] Módulo v4 registrado.');
+  console.info('[SIREV Mayo] Módulo v5 registrado.');
 })();
