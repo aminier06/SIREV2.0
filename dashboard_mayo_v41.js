@@ -465,6 +465,38 @@
       }
       if (typeof buildPeriodButtons === 'function') buildPeriodButtons();
       if (typeof rebuildGradoOptions === 'function') rebuildGradoOptions();
+
+      // Reconstruir los dropdowns territoriales (Regional, Distrito, Sector,
+      // Tipo, Tanda) para incluir los valores que solo existen en Mayo.
+      // Sin este paso, distritos como "04-04 Villa Altagracia" que no tienen
+      // datos en periodos anteriores nunca aparecen en el <select> y el
+      // filtro no devuelve resultados aunque los datos estén en COV.
+      if (typeof fill === 'function' && typeof idText === 'function' && Array.isArray(COV)) {
+        const prevReg   = document.getElementById('fRegional') ? document.getElementById('fRegional').value   : '';
+        const prevDist  = document.getElementById('fDistrito') ? document.getElementById('fDistrito').value   : '';
+        const prevSec   = document.getElementById('fSector')   ? document.getElementById('fSector').value     : '';
+        const prevTipo  = document.getElementById('fTipo')     ? document.getElementById('fTipo').value       : '';
+        const prevTanda = document.getElementById('fTanda')    ? document.getElementById('fTanda').value      : '';
+
+        fill('fRegional', COV.map(r => idText(r[0])), 'Todas las regionales');
+        fill('fDistrito', COV.map(r => idText(r[1])), 'Todos los distritos');
+        fill('fSector',   COV.map(r => idText(r[3])), 'Todos los sectores');
+        fill('fTipo',     COV.map(r => idText(r[4])), 'Todos los tipos');
+        fill('fTanda',    COV.map(r => idText(r[5])), 'Todas las tandas');
+
+        // Restaurar selecciones previas del usuario si siguen siendo válidas
+        const setIfOption = (id, val) => {
+          if (!val) return;
+          const sel = document.getElementById(id);
+          if (sel && [...sel.options].some(o => o.value === val)) sel.value = val;
+        };
+        setIfOption('fRegional', prevReg);
+        setIfOption('fDistrito', prevDist);
+        setIfOption('fSector',   prevSec);
+        setIfOption('fTipo',     prevTipo);
+        setIfOption('fTanda',    prevTanda);
+      }
+
       if (typeof rebuildDependentFilters === 'function') rebuildDependentFilters();
       if (typeof window.apply === 'function') window.apply();
     } catch (e) {
