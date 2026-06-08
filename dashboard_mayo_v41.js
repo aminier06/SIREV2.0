@@ -57,6 +57,9 @@
       .trim()
       .toUpperCase();
 
+    // Colapsar espacios múltiples (ej: "VILLA  ALTAGRACIA" → "VILLA ALTAGRACIA")
+    s = s.replace(/\s{2,}/g, ' ');
+
     // "04-04 NOMBRE" o "04 - 04 NOMBRE" → "0404 - NOMBRE"
     // Dos pares de dígitos separados por guion, seguidos de un espacio y el nombre
     s = s.replace(/^(\d{2})\s*[-\u2013]\s*(\d{2})\s+/, '$1$2 - ');
