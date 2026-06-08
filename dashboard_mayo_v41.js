@@ -43,6 +43,33 @@
       .toLowerCase();
   }
 
+  // Normaliza nombres de distrito y regional para que coincidan con el formato
+  // del diccionario de los datos core: "0404 - VILLA ALTAGRACIA"
+  // El CSV de Google Sheets puede traer variantes como:
+  //   "04-04 Villa Altagracia"  →  dígitos separados por guion
+  //   "04 - 04 Villa Altagracia"  →  dígitos separados por espacio-guion-espacio
+  //   minúsculas o mixtas
+  // Esta función las unifica al formato esperado por el filtro del dashboard.
+  function normalizeTerritorio(value) {
+    let s = String(value || '')
+      .replace(/\uFEFF/g, '')
+      .normalize('NFC')
+      .trim()
+      .toUpperCase();
+
+    // "04-04 NOMBRE" o "04 - 04 NOMBRE" → "0404 - NOMBRE"
+    // Dos pares de dígitos separados por guion, seguidos de un espacio y el nombre
+    s = s.replace(/^(\d{2})\s*[-\u2013]\s*(\d{2})\s+/, '$1$2 - ');
+
+    // "0404-NOMBRE" sin espacio-guion-espacio → "0404 - NOMBRE"
+    s = s.replace(/^(\d{4})[-\u2013](?!\s*-)/, '$1 - ');
+
+    // "0404 NOMBRE" sin guion → "0404 - NOMBRE"
+    s = s.replace(/^(\d{4})\s+(?!-)/, '$1 - ');
+
+    return s;
+  }
+
   function normalizePeriod(value) {
     const t = String(value || '')
       .replace(/\uFEFF/g, '')
@@ -199,8 +226,8 @@
       }
 
       const periodo = normalizePeriod(meta.periodo || PERIODO);
-      const regional = meta.regional || '';
-      const distrito = meta.distrito || '';
+      const regional = normalizeTerritorio(meta.regional || '');
+      const distrito = normalizeTerritorio(meta.distrito || '');
       const centro = meta.centro || '';
       const sector = meta.sector || '';
       const tipo = meta.tipo || '';
@@ -465,38 +492,6 @@
       }
       if (typeof buildPeriodButtons === 'function') buildPeriodButtons();
       if (typeof rebuildGradoOptions === 'function') rebuildGradoOptions();
-
-      // Reconstruir los dropdowns territoriales (Regional, Distrito, Sector,
-      // Tipo, Tanda) para incluir los valores que solo existen en Mayo.
-      // Sin este paso, distritos como "04-04 Villa Altagracia" que no tienen
-      // datos en periodos anteriores nunca aparecen en el <select> y el
-      // filtro no devuelve resultados aunque los datos estén en COV.
-      if (typeof fill === 'function' && typeof idText === 'function' && Array.isArray(COV)) {
-        const prevReg   = document.getElementById('fRegional') ? document.getElementById('fRegional').value   : '';
-        const prevDist  = document.getElementById('fDistrito') ? document.getElementById('fDistrito').value   : '';
-        const prevSec   = document.getElementById('fSector')   ? document.getElementById('fSector').value     : '';
-        const prevTipo  = document.getElementById('fTipo')     ? document.getElementById('fTipo').value       : '';
-        const prevTanda = document.getElementById('fTanda')    ? document.getElementById('fTanda').value      : '';
-
-        fill('fRegional', COV.map(r => idText(r[0])), 'Todas las regionales');
-        fill('fDistrito', COV.map(r => idText(r[1])), 'Todos los distritos');
-        fill('fSector',   COV.map(r => idText(r[3])), 'Todos los sectores');
-        fill('fTipo',     COV.map(r => idText(r[4])), 'Todos los tipos');
-        fill('fTanda',    COV.map(r => idText(r[5])), 'Todas las tandas');
-
-        // Restaurar selecciones previas del usuario si siguen siendo válidas
-        const setIfOption = (id, val) => {
-          if (!val) return;
-          const sel = document.getElementById(id);
-          if (sel && [...sel.options].some(o => o.value === val)) sel.value = val;
-        };
-        setIfOption('fRegional', prevReg);
-        setIfOption('fDistrito', prevDist);
-        setIfOption('fSector',   prevSec);
-        setIfOption('fTipo',     prevTipo);
-        setIfOption('fTanda',    prevTanda);
-      }
-
       if (typeof rebuildDependentFilters === 'function') rebuildDependentFilters();
       if (typeof window.apply === 'function') window.apply();
     } catch (e) {
