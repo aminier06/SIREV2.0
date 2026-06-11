@@ -1859,22 +1859,30 @@ function exportBrechasXls(tableId, scope){
   const table = document.getElementById(tableId);
   if(!table) return;
 
-  // Extraer encabezados
-  const headers = [...table.querySelectorAll('thead th')].map(th => th.innerText.replace(/[▲▼↕]/g,'').trim());
+  // Encabezados: insertar columna "#" antes del nombre
+  const rawHeaders = [...table.querySelectorAll('thead th')].map(th => th.innerText.replace(/[▲▼↕]/g,'').trim());
+  const headers = ['#', ...rawHeaders];
 
-  // Extraer filas de datos (texto limpio, sin iconos de ordenación)
-  const dataRows = [...table.querySelectorAll('tbody tr')].map(tr =>
-    [...tr.querySelectorAll('td')].map(td => {
+  // Extraer filas: separar número de ranking del nombre en la primera celda
+  const dataRows = [...table.querySelectorAll('tbody tr')].map((tr, i) =>
+    [...tr.querySelectorAll('td')].flatMap((td, colIdx) => {
+      if(colIdx === 0){
+        const bold = td.querySelector('b');
+        const nameSpan = td.querySelector('span');
+        const rankNum = bold ? parseInt(bold.innerText.replace('.','').trim(), 10) : (i + 1);
+        const name = nameSpan ? nameSpan.innerText.trim() : td.innerText.replace(/^\d+\.\s*/,'').trim();
+        return [rankNum, name];
+      }
       const span = td.querySelector('.status');
-      if(span) return span.innerText.trim();
-      return td.innerText.trim();
+      if(span) return [span.innerText.trim()];
+      return [td.innerText.trim()];
     })
   );
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
 
-  // Anchos de columna razonables
-  ws['!cols'] = headers.map((h,i) => ({ wch: i===0 ? 42 : 16 }));
+  // Anchos: # estrecho, nombre ancho, resto medianos
+  ws['!cols'] = headers.map((h, i) => ({ wch: i===0 ? 5 : i===1 ? 42 : 16 }));
 
   // Aplicar negritas al encabezado
   const range = XLSX.utils.decode_range(ws['!ref']);
