@@ -7,6 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="catalogo_centros_primaria_v41.js?v=41"></script>
 <script src="dashboard_data_core_v41_part1.js?v=41"></script>
 <script src="dashboard_data_core_v41_part2.js?v=41"></script>
@@ -1175,6 +1176,26 @@ html, body, #matrix, #matrix details, #matrix summary{
   outline:none;
 }
 
+/* Export-to-Excel button */
+.export-xls-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:linear-gradient(135deg,#1D6F42,#21874E);
+  color:#fff;border:none;border-radius:10px;
+  padding:7px 14px;font-size:12px;font-weight:850;
+  cursor:pointer;box-shadow:0 4px 10px rgba(29,111,66,.22);
+  transition:.15s;white-space:nowrap;
+}
+.export-xls-btn:hover{filter:brightness(1.10);transform:translateY(-1px);}
+.export-xls-btn svg{flex:0 0 auto;}
+.section-header-row{
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(90deg,var(--azul),var(--azul2));
+  padding:10px 16px;
+}
+.section-header-row h2{
+  margin:0;color:#fff;font-size:15px;background:none;padding:0;
+}
+
 </style>
 </head>
 <body>
@@ -1203,8 +1224,32 @@ html, body, #matrix, #matrix details, #matrix summary{
 <section id="desempeno" class="pane"><div class="section"><h2>Desempeño por grado</h2><div class="body"><canvas id="cGrade"></canvas></div></div><div class="section"><h2>Desempeño por área</h2><div class="body"><canvas id="cArea"></canvas></div></div></section>
 <section id="lectura" class="pane"><div class="section"><h2>Niveles de lectura por grado</h2><div class="body"><canvas id="cReadGrade"></canvas></div></div><div class="section"><h2>Tabla de lectura por grado y periodo</h2><div class="body tablewrap"><table id="tLect"></table></div></div></section>
 <section id="evolucion" class="pane"><div class="evol-grid"><div class="section"><h2>Evolución del desempeño por periodo</h2><div class="body"><canvas id="cEvolPerf"></canvas></div></div><div class="section"><h2>Evolución de lectura por periodo</h2><div class="body"><canvas id="cEvolRead"></canvas></div></div></div><div class="evol-grid" style="margin-top:16px"><div class="section subtle"><h2>Comparación del desempeño por periodo</h2><div class="body"><canvas id="cEvolPerfH"></canvas></div></div><div class="section subtle"><h2>Comparación de niveles de lectura por periodo</h2><div class="body"><canvas id="cEvolReadH"></canvas></div></div></div></section>
-<section id="brechas" class="pane"><div class="section"><h2>Ranking por regional</h2><div class="body tablewrap"><table id="tReg"></table></div></div><div class="section"><h2>Ranking por distrito</h2><div class="body tablewrap"><table id="tDist"></table></div></div><div class="section"><h2>Ranking por centro educativo</h2><div class="body tablewrap"><table id="tCentro"></table></div></div></section>
-<section id="matriz" class="pane"><div class="section"><h2>Matriz jerárquica Regional → Distrito → Centro</h2><div class="body"><div class="matrix-controls"><div class="matrix-control matrix-mode"><label>Tipo de análisis</label><select id="matrixMode" onchange="renderMatrix()"><option value="perf">Desempeño</option><option value="read">Lectura</option></select></div><div class="matrix-control matrix-search"><label>Buscar</label><input id="matrixSearch" oninput="renderMatrix()" placeholder="Buscar regional, distrito o centro"></div></div><div id="matrix"></div></div></div></section>
+<section id="brechas" class="pane">
+  <div class="section">
+    <div class="section-header-row"><h2>Ranking por regional</h2><button class="export-xls-btn" onclick="exportBrechasXls('tReg','regional')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>Exportar Excel</button></div>
+    <div class="body tablewrap"><table id="tReg"></table></div>
+  </div>
+  <div class="section">
+    <div class="section-header-row"><h2>Ranking por distrito</h2><button class="export-xls-btn" onclick="exportBrechasXls('tDist','distrito')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>Exportar Excel</button></div>
+    <div class="body tablewrap"><table id="tDist"></table></div>
+  </div>
+  <div class="section">
+    <div class="section-header-row"><h2>Ranking por centro educativo</h2><button class="export-xls-btn" onclick="exportBrechasXls('tCentro','centro_educativo')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>Exportar Excel</button></div>
+    <div class="body tablewrap"><table id="tCentro"></table></div>
+  </div>
+</section>
+<section id="matriz" class="pane">
+  <div class="section">
+    <div class="section-header-row"><h2>Matriz jerárquica Regional → Distrito → Centro</h2><button class="export-xls-btn" onclick="exportMatrizXls()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>Exportar Excel</button></div>
+    <div class="body">
+      <div class="matrix-controls">
+        <div class="matrix-control matrix-mode"><label>Tipo de análisis</label><select id="matrixMode" onchange="renderMatrix()"><option value="perf">Desempeño</option><option value="read">Lectura</option></select></div>
+        <div class="matrix-control matrix-search"><label>Buscar</label><input id="matrixSearch" oninput="renderMatrix()" placeholder="Buscar regional, distrito o centro"></div>
+      </div>
+      <div id="matrix"></div>
+    </div>
+  </div>
+</section>
 </main></div>
 <script>
 Chart.register(ChartDataLabels);
@@ -1631,10 +1676,10 @@ function setRankSort(tableId,col){const s=rankSortState[tableId]||(rankSortState
 function rankSortValue(r,col){if(col===0)return r.k||''; if(col===1)return r.ev||0; if(col===2)return r.idxB||0; if(col===3)return r.pe||0; if(col===4)return r.pa||0; if(col===5)return r.ps||0; if(col===6)return (r.st&&r.st[1])||''; return 0;}
 function sortRankRows(arr,tableId){const s=rankSortState[tableId]||{col:2,dir:'desc'}; return [...arr].sort((a,b)=>{let va=rankSortValue(a,s.col),vb=rankSortValue(b,s.col); let c=(typeof va==='string'||typeof vb==='string')?String(va).localeCompare(String(vb),'es',{numeric:true}):(va-vb); if(c===0)c=(b.idxB-a.idxB)||(b.pe-a.pe)||(a.ps-b.ps); return s.dir==='asc'?c:-c;});}
 function rankHeader(tableId,col,text){const s=rankSortState[tableId]||{col:2,dir:'desc'}; const mark=s.col===col?(s.dir==='asc'?'▲':'▼'):'↕'; const cls=s.col===col?'':'unsorted'; return `<th class="sortable" onclick="setRankSort('${tableId}',${col})" title="Ordenar por ${text}">${text}<span class="sortmark ${cls}">${mark}</span></th>`;}
-function renderRankTable(id,idx,label){let perfMap={}, covMap={}; for(const r of current.perf){let k=idText(r[idx]); perfMap[k]=perfMap[k]||[]; perfMap[k].push(r)} for(const r of current.cov){let k=idText(r[idx]); covMap[k]=(covMap[k]||0)+r[10]} let arr=Object.entries(perfMap).map(([k,rows])=>{let m=aggLevels(rows,['Elemental','Aceptable','Satisfactorio'],12,13),tot=m.Elemental+m.Aceptable+m.Satisfactorio,pe=pct(m.Elemental,tot),pa=pct(m.Aceptable,tot),ps=pct(m.Satisfactorio,tot),idxB=breachIndex(pe,ps),ev=covMap[k]||0,st=rankStatus(idxB,ev);return {k,ev,pe,pa,ps,idxB,st}}); arr=sortRankRows(arr,id); document.getElementById(id).innerHTML=`<thead><tr>${rankHeader(id,0,label)}${rankHeader(id,1,'Evaluados')}${rankHeader(id,2,'Índice')}${rankHeader(id,3,'% Elemental')}${rankHeader(id,4,'% Aceptable')}${rankHeader(id,5,'% Satisfactorio')}${rankHeader(id,6,'Estado')}</tr></thead><tbody>${arr.length?arr.map((r,i)=>`<tr><td class="rank-name"><b>${i+1}.</b> <span>${r.k}</span></td><td class="num">${fmt(r.ev)}</td><td class="num">${r.idxB.toFixed(2)}</td><td class="num breach-elemental">${pctf(r.pe)}</td><td class="num breach-aceptable">${pctf(r.pa)}</td><td class="num breach-satisfactorio">${pctf(r.ps)}</td><td class="num"><span class="status ${r.st[0]}">${r.st[1]}</span></td></tr>`).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:22px">No hay datos para los filtros seleccionados.</td></tr>`}</tbody>`}
+function renderRankTable(id,idx,label){let perfMap={}, covMap={}; for(const r of current.perf){let k=idText(r[idx]); if(!k)continue; perfMap[k]=perfMap[k]||[]; perfMap[k].push(r)} for(const r of current.cov){let k=idText(r[idx]); if(!k)continue; covMap[k]=(covMap[k]||0)+r[10]} let arr=Object.entries(perfMap).map(([k,rows])=>{let m=aggLevels(rows,['Elemental','Aceptable','Satisfactorio'],12,13),tot=m.Elemental+m.Aceptable+m.Satisfactorio,pe=pct(m.Elemental,tot),pa=pct(m.Aceptable,tot),ps=pct(m.Satisfactorio,tot),idxB=breachIndex(pe,ps),ev=covMap[k]||0,st=rankStatus(idxB,ev);return {k,ev,pe,pa,ps,idxB,st}}); arr=sortRankRows(arr,id); document.getElementById(id).innerHTML=`<thead><tr>${rankHeader(id,0,label)}${rankHeader(id,1,'Evaluados')}${rankHeader(id,2,'Índice')}${rankHeader(id,3,'% Elemental')}${rankHeader(id,4,'% Aceptable')}${rankHeader(id,5,'% Satisfactorio')}${rankHeader(id,6,'Estado')}</tr></thead><tbody>${arr.length?arr.map((r,i)=>`<tr><td class="rank-name"><b>${i+1}.</b> <span>${r.k}</span></td><td class="num">${fmt(r.ev)}</td><td class="num">${r.idxB.toFixed(2)}</td><td class="num breach-elemental">${pctf(r.pe)}</td><td class="num breach-aceptable">${pctf(r.pa)}</td><td class="num breach-satisfactorio">${pctf(r.ps)}</td><td class="num"><span class="status ${r.st[0]}">${r.st[1]}</span></td></tr>`).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:22px">No hay datos para los filtros seleccionados.</td></tr>`}</tbody>`}
 function renderRanks(){renderRankTable('tReg',0,'Regional');renderRankTable('tDist',1,'Distrito');renderRankTable('tCentro',2,'Centro educativo')}
 const matrixSortState={col:0,dir:'asc'};
-function matrixAgg(mode){const rows=mode==='perf'?current.perf:current.read, levels=mode==='perf'?['Elemental','Aceptable','Satisfactorio']:readOrder, idxL=mode==='perf'?12:9, idxV=mode==='perf'?13:10; let m={}; for(const r of rows){let path=[idText(r[0]),idText(r[1]),idText(r[2])]; for(let depth=1;depth<=3;depth++){let k=path.slice(0,depth).join('|'); if(!m[k])m[k]={name:path[depth-1],depth,vals:Object.fromEntries(levels.map(l=>[l,0])),children:new Set()}; m[k].vals[idText(r[idxL])] += r[idxV]; if(depth>1)m[path.slice(0,depth-1).join('|')].children.add(k)}} let ev={}; for(const r of current.cov){let path=[idText(r[0]),idText(r[1]),idText(r[2])]; for(let d=1;d<=3;d++){let k=path.slice(0,d).join('|'); ev[k]=(ev[k]||0)+r[10]}} return {m,ev,levels};}
+function matrixAgg(mode){const rows=mode==='perf'?current.perf:current.read, levels=mode==='perf'?['Elemental','Aceptable','Satisfactorio']:readOrder, idxL=mode==='perf'?12:9, idxV=mode==='perf'?13:10; let m={}; for(const r of rows){let path=[idText(r[0]),idText(r[1]),idText(r[2])]; if(!path[0])continue; for(let depth=1;depth<=3;depth++){let k=path.slice(0,depth).join('|'); if(!m[k])m[k]={name:path[depth-1],depth,vals:Object.fromEntries(levels.map(l=>[l,0])),children:new Set()}; m[k].vals[idText(r[idxL])] += r[idxV]; if(depth>1)m[path.slice(0,depth-1).join('|')].children.add(k)}} let ev={}; for(const r of current.cov){let path=[idText(r[0]),idText(r[1]),idText(r[2])]; if(!path[0])continue; for(let d=1;d<=3;d++){let k=path.slice(0,d).join('|'); ev[k]=(ev[k]||0)+r[10]}} return {m,ev,levels};}
 function matrixMetric(A,k,col){let o=A.m[k]; if(!o)return 0; if(col===0)return o.name||''; if(col===1)return A.ev[k]||0; const tot=Object.values(o.vals).reduce((a,b)=>a+b,0); return pct(o.vals[A.levels[col-2]]||0,tot);}
 function matrixOpenKeys(){return new Set([...document.querySelectorAll('#matrix details.mx[open][data-key]')].map(d=>d.dataset.key));}
 function setMatrixSort(col){if(matrixSortState.col===col)matrixSortState.dir=matrixSortState.dir==='asc'?'desc':'asc';else{matrixSortState.col=col;matrixSortState.dir=col===0?'asc':'desc'}renderMatrix();}
@@ -1770,8 +1815,8 @@ function addCoverageRows(out){
 }
 function breachRows(idx,label){
   let perfMap={}, covMap={};
-  for(const r of current.perf){let k=idText(r[idx]); perfMap[k]=perfMap[k]||[]; perfMap[k].push(r)}
-  for(const r of current.cov){let k=idText(r[idx]); covMap[k]=(covMap[k]||0)+r[10]}
+  for(const r of current.perf){let k=idText(r[idx]); if(!k)continue; perfMap[k]=perfMap[k]||[]; perfMap[k].push(r)}
+  for(const r of current.cov){let k=idText(r[idx]); if(!k)continue; covMap[k]=(covMap[k]||0)+r[10]}
   return Object.entries(perfMap).map(([k,rows])=>{
     let m=aggLevels(rows,['Elemental','Aceptable','Satisfactorio'],12,13),tot=m.Elemental+m.Aceptable+m.Satisfactorio;
     let pe=pct(m.Elemental,tot),pa=pct(m.Aceptable,tot),ps=pct(m.Satisfactorio,tot),idxB=breachIndex(pe,ps),ev=covMap[k]||0,st=rankStatus(idxB,ev);
@@ -1797,6 +1842,110 @@ function exportResumen(){
    Mayo queda gestionado únicamente por dashboard_mayo_v41.js?v=46,
    evitando el error: Maximum call stack size exceeded.
    ───────────────────────────────────────────────────────────────────── */
+
+/* ── EXPORTACIÓN A EXCEL ─────────────────────────────────────────────────
+   exportBrechasXls: extrae filas de la tabla DOM ya renderizada (incluye
+   el orden y los filtros activos en ese momento).
+   exportMatrizXls: reconstruye la jerarquía Regional → Distrito → Centro
+   con los mismos datos filtrados que usa renderMatrix.
+   ────────────────────────────────────────────────────────────────────── */
+function xlsDownload(wb, filename){
+  if(!window.XLSX){ alert('La librería de Excel (SheetJS) no se cargó. Revise la conexión a internet.'); return; }
+  XLSX.writeFile(wb, filename);
+}
+
+function exportBrechasXls(tableId, scope){
+  if(!window.XLSX){ alert('La librería de Excel (SheetJS) no se cargó.'); return; }
+  const table = document.getElementById(tableId);
+  if(!table) return;
+
+  // Extraer encabezados
+  const headers = [...table.querySelectorAll('thead th')].map(th => th.innerText.replace(/[▲▼↕]/g,'').trim());
+
+  // Extraer filas de datos (texto limpio, sin iconos de ordenación)
+  const dataRows = [...table.querySelectorAll('tbody tr')].map(tr =>
+    [...tr.querySelectorAll('td')].map(td => {
+      const span = td.querySelector('.status');
+      if(span) return span.innerText.trim();
+      return td.innerText.trim();
+    })
+  );
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+
+  // Anchos de columna razonables
+  ws['!cols'] = headers.map((h,i) => ({ wch: i===0 ? 42 : 16 }));
+
+  // Aplicar negritas al encabezado
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for(let C = range.s.c; C <= range.e.c; C++){
+    const cell = ws[XLSX.utils.encode_cell({r:0, c:C})];
+    if(cell) cell.s = { font:{ bold:true } };
+  }
+
+  const f = current.f || filters();
+  const periodos = getSelectedPeriods().join('-') || 'todos';
+  const regional = f.reg ? f.reg.replace(/[\/\\?*\[\]:]/g,'') : 'todas';
+  const filename = `sirev_brechas_${scope}_${periodos}_${regional}.xlsx`;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, scope.replace('_',' ').substring(0,31));
+  xlsDownload(wb, filename);
+}
+
+function exportMatrizXls(){
+  if(!window.XLSX){ alert('La librería de Excel (SheetJS) no se cargó.'); return; }
+  const mode = (document.getElementById('matrixMode') || {}).value || 'perf';
+  const q = ((document.getElementById('matrixSearch') || {}).value || '').toLowerCase();
+  const A = matrixAgg(mode);
+  const maxDepth = matrixMaxDepth();
+
+  const isPerf = mode === 'perf';
+  const levelHeaders = isPerf
+    ? ['% Elemental','% Aceptable','% Satisfactorio']
+    : readOrder.map(l => '% '+l);
+
+  const headers = ['Nivel','Regional','Distrito','Centro educativo','Evaluados',...levelHeaders];
+  const rows = [headers];
+
+  function collectRows(k, reg, dist){
+    const o = A.m[k];
+    if(!o) return;
+    const tot = Object.values(o.vals).reduce((a,b)=>a+b,0);
+    const ev = A.ev[k] || 0;
+    const levelPcts = A.levels.map(l => tot ? +(100*o.vals[l]/tot).toFixed(2) : 0);
+    const depth = o.depth;
+    const name = o.name || '';
+    const newReg  = depth===1 ? name : reg;
+    const newDist = depth===2 ? name : (depth===1 ? '' : dist);
+    const centro  = depth===3 ? name : '';
+    const nivelLabel = depth===1 ? 'Regional' : depth===2 ? 'Distrito' : 'Centro';
+    rows.push([nivelLabel, newReg, newDist, centro, ev, ...levelPcts]);
+    // Recursión sobre hijos filtrados
+    const children = sortMatrixKeys([...o.children].filter(c => matrixHasMatch(c,A,q,maxDepth)), A);
+    for(const child of children) collectRows(child, newReg, newDist);
+  }
+
+  let roots = sortMatrixKeys(Object.keys(A.m).filter(k => A.m[k].depth===1), A);
+  if(q) roots = roots.filter(k => matrixHasMatch(k,A,q,maxDepth));
+  for(const root of roots) collectRows(root,'','');
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [
+    {wch:12},{wch:38},{wch:38},{wch:42},{wch:12},
+    ...levelHeaders.map(()=>({wch:18}))
+  ];
+
+  const f = current.f || filters();
+  const periodos = getSelectedPeriods().join('-') || 'todos';
+  const regional = f.reg ? f.reg.replace(/[\/\\?*\[\]:]/g,'') : 'todas';
+  const tipoLabel = isPerf ? 'desempeno' : 'lectura';
+  const filename = `sirev_matriz_${tipoLabel}_${periodos}_${regional}.xlsx`;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, ('Matriz '+tipoLabel).substring(0,31));
+  xlsDownload(wb, filename);
+}
 
 window.addEventListener('load',loadData);
 </script>
