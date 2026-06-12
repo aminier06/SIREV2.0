@@ -368,15 +368,7 @@ iframe{
                 </div>
             </div>
 
-            <div class="dropdown">
-                <button class="nav-btn" onclick="toggleMenu('menuSistematizacion', event)">Monitoreo de registros <span class="chev">▼</span></button>
-                <div id="menuSistematizacion" class="dropdown-content">
-                    <button onclick="abrirRecurso('sistematizacion','septiembre')">Septiembre</button>
-                    <button onclick="abrirRecurso('sistematizacion','noviembre')">Noviembre</button>
-                    <button onclick="abrirRecurso('sistematizacion','marzo')">Marzo</button>
-                    <button onclick="abrirRecurso('sistematizacion','mayo')">Mayo</button>
-                </div>
-            </div>
+            <button class="nav-btn" onclick="abrirMonitoreo()">Monitoreo de registros</button>
 
             <div class="dropdown">
                 <button class="nav-btn" onclick="toggleMenu('menuFormularios', event)">Registro de resultados <span class="chev">▼</span></button>
@@ -487,6 +479,13 @@ function abrirRecurso(tipo, mes) {
     const url = datosPorAnio[anioSeleccionado][tipo]?.[mes];
     if (url) window.open(url, "_blank");
     else alert("Recurso no disponible para este año escolar.");
+    cerrarMenus();
+}
+
+function abrirMonitoreo() {
+    const url = datosPorAnio[anioSeleccionado].sistematizacion?.mayo;
+    if (url) window.open(url, "_blank");
+    else alert("Monitoreo no disponible para este año escolar.");
     cerrarMenus();
 }
 
