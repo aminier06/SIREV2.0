@@ -202,6 +202,31 @@ button{font:inherit}
     opacity:.92;
     white-space:nowrap;
 }
+.countdown-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.62rem .9rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.34);
+    background:rgba(255,255,255,.13);
+    color:#fff;
+    font-size:.88rem;
+    font-weight:850;
+    white-space:nowrap;
+    box-shadow:0 8px 22px rgba(0,23,51,.14);
+}
+.countdown-pill::before{
+    content:"⏳";
+    font-size:1rem;
+}
+.countdown-pill.cerrado{
+    background:rgba(200,16,46,.24);
+    border-color:rgba(255,255,255,.42);
+}
+.countdown-pill.cerrado::before{
+    content:"🔒";
+}
 
 /* =============================
    MAIN
@@ -307,6 +332,7 @@ iframe{
     .dropdown,.nav-btn{width:100%}
     .nav-btn{justify-content:space-between}
     .nav-spacer,.quick-note{display:none}
+    .countdown-pill{width:100%;justify-content:center}
     .resource-head{grid-template-columns:1fr}
     .status-pill{justify-self:start}
     iframe{min-height:640px;height:75vh}
@@ -379,8 +405,8 @@ iframe{
             </div>
 
             <div class="nav-spacer"></div>
-            <div id="quickNote" class="quick-note">
-        </div>
+            <div id="conteoCierreFormularios" class="countdown-pill" aria-live="polite">Registro abierto</div>
+            <div id="quickNote" class="quick-note"></div>
     </nav>
 </header>
 
@@ -435,6 +461,36 @@ const mensajeCierreFormularios = "El registro de resultados cerró el 12 de juni
 
 function formulariosEstanDisponibles() {
     return new Date() < fechaCierreFormularios;
+}
+
+function actualizarConteoCierreFormularios() {
+    const contenedor = document.getElementById("conteoCierreFormularios");
+    if (!contenedor) return;
+
+    const ahora = new Date();
+    const diferencia = fechaCierreFormularios - ahora;
+
+    if (diferencia <= 0) {
+        contenedor.textContent = "Registro cerrado";
+        contenedor.classList.add("cerrado");
+        return;
+    }
+
+    contenedor.classList.remove("cerrado");
+
+    const totalSegundos = Math.floor(diferencia / 1000);
+    const dias = Math.floor(totalSegundos / 86400);
+    const horas = Math.floor((totalSegundos % 86400) / 3600);
+    const minutos = Math.floor((totalSegundos % 3600) / 60);
+    const segundos = totalSegundos % 60;
+
+    const partes = [];
+    if (dias > 0) partes.push(`${dias} d`);
+    partes.push(`${String(horas).padStart(2, "0")} h`);
+    partes.push(`${String(minutos).padStart(2, "0")} min`);
+    partes.push(`${String(segundos).padStart(2, "0")} s`);
+
+    contenedor.textContent = `Cierre del registro en ${partes.join(" · ")}`;
 }
 
 function seleccionarAnio(anio) {
@@ -582,6 +638,9 @@ if (visorSirev) {
     });
 }
 window.addEventListener("resize", ajustarAltoVisor);
+
+actualizarConteoCierreFormularios();
+setInterval(actualizarConteoCierreFormularios, 1000);
 
 document.addEventListener("click", cerrarMenus);
 </script>
