@@ -428,6 +428,15 @@ const datosPorAnio = {
 let anioSeleccionado = "2025-2026";
 let dashboardActual = "sirevInteractivo";
 
+// Fecha y hora de cierre del registro de resultados.
+// Se usa la zona horaria de República Dominicana (UTC-04:00).
+const fechaCierreFormularios = new Date("2026-06-12T14:00:00-04:00");
+const mensajeCierreFormularios = "El registro de resultados cerró el 12 de junio de 2026 a las 2:00 p. m.";
+
+function formulariosEstanDisponibles() {
+    return new Date() < fechaCierreFormularios;
+}
+
 function seleccionarAnio(anio) {
     anioSeleccionado = anio;
     document.getElementById("anioActualTexto").textContent = anio;
@@ -490,6 +499,12 @@ function abrirMonitoreo() {
 }
 
 function abrirFormulario(ciclo) {
+    if (!formulariosEstanDisponibles()) {
+        alert(mensajeCierreFormularios);
+        cerrarMenus();
+        return;
+    }
+
     const url = datosPorAnio[anioSeleccionado].formularios?.[ciclo];
     if (url) window.open(url, "_blank");
     else alert("Formulario no disponible para este año escolar.");
