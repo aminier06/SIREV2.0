@@ -542,6 +542,15 @@ iframe{
                     <select id="adminYear" onchange="cambiarAnioAdmin()"></select>
                     <small>Las URLs guardadas se aplican únicamente al año seleccionado aquí.</small>
                 </div>
+                <div class="admin-field">
+                    <label for="adminNewYear">Nuevo aÃ±o lectivo</label>
+                    <input id="adminNewYear" type="text" placeholder="2027-2028">
+                </div>
+                <div class="admin-field">
+                    <label>&nbsp;</label>
+                    <button class="admin-action" onclick="crearAnioAdmin()">AÃ±adir aÃ±o lectivo</button>
+                    <small>Use el formato 2027-2028.</small>
+                </div>
                 <div class="admin-field full">
                     <label for="adminDashboardUrl">Dashboard interactivo SIREV</label>
                     <input id="adminDashboardUrl" type="url" placeholder="dashboard_sirev_primaria_v41_admin.html">
@@ -670,6 +679,28 @@ function clonar(obj) {
     return JSON.parse(JSON.stringify(obj));
 }
 
+function crearConfigAnioVacia() {
+    return {
+        dashboardUrl: "",
+        powerBiUrl: "",
+        pruebas: {septiembre: "", noviembre: "", marzo: "", mayo: ""},
+        sistematizacion: {septiembre: "", noviembre: "", marzo: "", mayo: ""},
+        pcUrl: "",
+        scUrl: "",
+        deadlineIso: ""
+    };
+}
+
+function crearDatosAnioVacio() {
+    return {
+        informe: "",
+        dashboard: "",
+        pruebas: {septiembre: "", noviembre: "", marzo: "", mayo: ""},
+        sistematizacion: {septiembre: "", noviembre: "", marzo: "", mayo: ""},
+        formularios: {...FORMULARIOS_FIJOS}
+    };
+}
+
 function construirConfigAdminBase() {
     const years = {};
     Object.entries(datosPorAnio).forEach(([anio, datos]) => {
@@ -723,6 +754,16 @@ function normalizarConfigAdmin(saved) {
             sistematizacion: {...base.years[anio].sistematizacion, ...(yearSaved.sistematizacion || {})}
         };
     });
+    Object.keys(saved.years || {}).forEach(anio => {
+        if (base.years[anio]) return;
+        const yearSaved = saved.years[anio] || {};
+        base.years[anio] = {
+            ...crearConfigAnioVacia(),
+            ...yearSaved,
+            pruebas: {...crearConfigAnioVacia().pruebas, ...(yearSaved.pruebas || {})},
+            sistematizacion: {...crearConfigAnioVacia().sistematizacion, ...(yearSaved.sistematizacion || {})}
+        };
+    });
     return base;
 }
 
@@ -736,6 +777,9 @@ function cargarConfigAdmin() {
 }
 
 function aplicarConfigAdmin() {
+    Object.keys(adminConfig.years || {}).forEach(anio => {
+        if (!datosPorAnio[anio]) datosPorAnio[anio] = crearDatosAnioVacio();
+    });
     Object.keys(datosPorAnio).forEach(anio => {
         const cfg = configAnio(anio);
         datosPorAnio[anio].dashboard = cfg.dashboardUrl || "";
@@ -751,15 +795,7 @@ function aplicarConfigAdmin() {
 
 function configAnio(anio) {
     if (!adminConfig.years[anio]) {
-        adminConfig.years[anio] = clonar(adminDefaults.years[anio] || {
-            dashboardUrl: "",
-            powerBiUrl: "",
-            pruebas: {},
-            sistematizacion: {},
-            pcUrl: "",
-            scUrl: "",
-            deadlineIso: ""
-        });
+        adminConfig.years[anio] = clonar(adminDefaults.years[anio] || crearConfigAnioVacia());
     }
     return adminConfig.years[anio];
 }
@@ -834,15 +870,51 @@ function llenarFormularioAdmin() {
 
 function poblarSelectorAnioAdmin() {
     const select = document.getElementById("adminYear");
-    const options = Object.keys(datosPorAnio).map(anio => `<option value="${anio}">${anio}</option>`).join("");
+    const options = obtenerAniosDisponibles().map(anio => `<option value="${anio}">${anio}</option>`).join("");
     if (select.innerHTML !== options) select.innerHTML = options;
     if (!datosPorAnio[anioAdminSeleccionado]) anioAdminSeleccionado = anioSeleccionado;
     select.value = anioAdminSeleccionado;
 }
 
+function obtenerAniosDisponibles() {
+    return [...new Set([...Object.keys(datosPorAnio), ...Object.keys(adminConfig.years || {})])].sort();
+}
+
+function poblarMenuAnioPublico() {
+    const menu = document.getElementById("menuAnio");
+    if (!menu) return;
+    menu.innerHTML = obtenerAniosDisponibles()
+        .map(anio => `<button onclick="seleccionarAnio('${anio}')">${anio}</button>`)
+        .join("");
+}
+
 function cambiarAnioAdmin() {
     anioAdminSeleccionado = document.getElementById("adminYear").value;
     llenarFormularioAdmin();
+}
+
+function crearAnioAdmin() {
+    if (!adminAutenticado()) return;
+    const input = document.getElementById("adminNewYear");
+    const nuevoAnio = input.value.trim();
+    if (!/^\d{4}-\d{4}$/.test(nuevoAnio)) {
+        document.getElementById("adminStatus").textContent = "Escriba el aÃ±o lectivo con el formato 2027-2028.";
+        return;
+    }
+    const [inicio, fin] = nuevoAnio.split("-").map(Number);
+    if (fin !== inicio + 1) {
+        document.getElementById("adminStatus").textContent = "El segundo aÃ±o debe ser consecutivo al primero.";
+        return;
+    }
+    if (!datosPorAnio[nuevoAnio]) datosPorAnio[nuevoAnio] = crearDatosAnioVacio();
+    if (!adminConfig.years[nuevoAnio]) adminConfig.years[nuevoAnio] = crearConfigAnioVacia();
+    anioAdminSeleccionado = nuevoAnio;
+    input.value = "";
+    localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(adminConfig));
+    aplicarConfigAdmin();
+    poblarMenuAnioPublico();
+    llenarFormularioAdmin();
+    document.getElementById("adminStatus").textContent = "Anio lectivo " + nuevoAnio + " anadido. Complete sus enlaces y guarde.";
 }
 
 function guardarConfigAdmin() {
@@ -868,6 +940,7 @@ function guardarConfigAdmin() {
     };
     localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(adminConfig));
     aplicarConfigAdmin();
+    poblarMenuAnioPublico();
     document.getElementById("adminStatus").textContent = "Configuracion guardada para " + anioAdminSeleccionado + ".";
     actualizarConteoCierreFormularios();
     if (dashboardActual === "sirevInteractivo") abrirDashboard("sirevInteractivo");
@@ -875,9 +948,10 @@ function guardarConfigAdmin() {
 
 function restaurarConfigAdmin() {
     if (!adminAutenticado()) return;
-    adminConfig.years[anioAdminSeleccionado] = clonar(adminDefaults.years[anioAdminSeleccionado]);
+    adminConfig.years[anioAdminSeleccionado] = clonar(adminDefaults.years[anioAdminSeleccionado] || crearConfigAnioVacia());
     localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(adminConfig));
     aplicarConfigAdmin();
+    poblarMenuAnioPublico();
     llenarFormularioAdmin();
     if (dashboardActual === "sirevInteractivo") abrirDashboard("sirevInteractivo");
     actualizarConteoCierreFormularios();
@@ -900,7 +974,9 @@ function agregarParametrosFormulario(url) {
     const cfg = configAnio(anioSeleccionado);
     const params = new URLSearchParams();
     if (cfg.deadlineIso) params.set("cierre", cfg.deadlineIso);
-    return url + (url.includes("?") ? "&" : "?") + params.toString();
+    const query = params.toString();
+    if (!query) return url;
+    return url + (url.includes("?") ? "&" : "?") + query;
 }
 
 function fechaIsoParaInput(iso) {
@@ -1111,6 +1187,7 @@ if (visorSirev) {
     });
 }
 aplicarConfigAdmin();
+poblarMenuAnioPublico();
 abrirDashboard("sirevInteractivo");
 actualizarConteoCierreFormularios();
 setInterval(actualizarConteoCierreFormularios, 1000);
@@ -1124,6 +1201,9 @@ document.getElementById("panelAdmin").addEventListener("click", (e) => {
     document.getElementById(id).addEventListener("keydown", (e) => {
         if (e.key === "Enter") validarAccesoAdmin();
     });
+});
+document.getElementById("adminNewYear").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") crearAnioAdmin();
 });
 </script>
 </body>
