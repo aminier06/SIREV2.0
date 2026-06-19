@@ -268,7 +268,29 @@ button{font:inherit}
     cursor:pointer;
     font-weight:900;
 }
+.admin-mini-btn{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,.26);
+    background:rgba(255,255,255,.08);
+    color:rgba(255,255,255,.78);
+    cursor:pointer;
+    font-size:.78rem;
+    font-weight:900;
+    opacity:.72;
+    box-shadow:none;
+}
+.admin-mini-btn:hover{
+    opacity:1;
+    background:rgba(255,255,255,.16);
+}
+.admin-login{
+    padding:1rem 1.15rem 1.15rem;
+    border-bottom:1px solid #e7eef6;
+}
 .admin-body{padding:1rem 1.15rem 1.15rem}
+.admin-body[hidden],.admin-login[hidden]{display:none}
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
 .admin-field{display:flex;flex-direction:column;gap:.35rem}
 .admin-field.full{grid-column:1 / -1}
@@ -470,7 +492,6 @@ iframe{
             </div>
 
             <button class="nav-btn" onclick="abrirMonitoreo()">Monitoreo de registros</button>
-            <button class="nav-btn" onclick="abrirPanelAdmin(event)">Administrador</button>
 
             <div class="dropdown">
                 <button class="nav-btn" onclick="toggleMenu('menuFormularios', event)">Registro de resultados <span class="chev">▼</span></button>
@@ -483,6 +504,7 @@ iframe{
             <div class="nav-spacer"></div>
             <div id="conteoCierreFormularios" class="countdown-pill" aria-live="polite">Registro abierto</div>
             <div id="quickNote" class="quick-note"></div>
+            <button class="admin-mini-btn" onclick="abrirPanelAdmin(event)" title="Acceso administrador" aria-label="Acceso administrador">A</button>
     </nav>
 </header>
 
@@ -495,7 +517,23 @@ iframe{
             </div>
             <button class="admin-close" onclick="cerrarPanelAdmin()" aria-label="Cerrar">X</button>
         </div>
-        <div class="admin-body">
+        <div id="adminLogin" class="admin-login">
+            <div class="admin-grid">
+                <div class="admin-field">
+                    <label for="adminUser">Usuario</label>
+                    <input id="adminUser" type="text" autocomplete="username">
+                </div>
+                <div class="admin-field">
+                    <label for="adminPass">Clave</label>
+                    <input id="adminPass" type="password" autocomplete="current-password">
+                </div>
+            </div>
+            <div class="admin-actions">
+                <button class="admin-action primary" onclick="validarAccesoAdmin()">Ingresar</button>
+            </div>
+            <div id="adminLoginStatus" class="admin-status" aria-live="polite"></div>
+        </div>
+        <div id="adminBody" class="admin-body" hidden>
             <div class="admin-grid">
                 <div class="admin-field full">
                     <label for="adminDashboardUrl">Dashboard interactivo SIREV</label>
@@ -579,6 +617,9 @@ const datosPorAnio = {
 let anioSeleccionado = "2025-2026";
 let dashboardActual = "sirevInteractivo";
 const ADMIN_CONFIG_KEY = "sirevPrimariaAdminConfig";
+const ADMIN_SESSION_KEY = "sirevPrimariaAdminSession";
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "Sirev2026*";
 const adminDefaults = {
     dashboardUrl: datosPorAnio["2025-2026"].dashboard,
     powerBiUrl: datosPorAnio["2025-2026"].informe,
@@ -609,7 +650,7 @@ function aplicarConfigAdmin() {
 function abrirPanelAdmin(e) {
     if (e) e.stopPropagation();
     cerrarMenus();
-    llenarFormularioAdmin();
+    mostrarEstadoAccesoAdmin();
     const panel = document.getElementById("panelAdmin");
     panel.classList.add("show");
     panel.setAttribute("aria-hidden", "false");
@@ -619,6 +660,39 @@ function cerrarPanelAdmin() {
     const panel = document.getElementById("panelAdmin");
     panel.classList.remove("show");
     panel.setAttribute("aria-hidden", "true");
+    document.getElementById("adminPass").value = "";
+    document.getElementById("adminLoginStatus").textContent = "";
+}
+
+function adminAutenticado() {
+    return sessionStorage.getItem(ADMIN_SESSION_KEY) === "ok";
+}
+
+function mostrarEstadoAccesoAdmin() {
+    const login = document.getElementById("adminLogin");
+    const body = document.getElementById("adminBody");
+    const auth = adminAutenticado();
+    login.hidden = auth;
+    body.hidden = !auth;
+    document.getElementById("adminLoginStatus").textContent = "";
+    if (auth) {
+        llenarFormularioAdmin();
+    } else {
+        document.getElementById("adminUser").value = "";
+        document.getElementById("adminPass").value = "";
+        setTimeout(() => document.getElementById("adminUser").focus(), 50);
+    }
+}
+
+function validarAccesoAdmin() {
+    const user = document.getElementById("adminUser").value.trim();
+    const pass = document.getElementById("adminPass").value;
+    if (user === ADMIN_USER && pass === ADMIN_PASS) {
+        sessionStorage.setItem(ADMIN_SESSION_KEY, "ok");
+        mostrarEstadoAccesoAdmin();
+        return;
+    }
+    document.getElementById("adminLoginStatus").textContent = "Usuario o clave incorrectos.";
 }
 
 function llenarFormularioAdmin() {
@@ -632,6 +706,7 @@ function llenarFormularioAdmin() {
 }
 
 function guardarConfigAdmin() {
+    if (!adminAutenticado()) return;
     adminConfig = {
         dashboardUrl: document.getElementById("adminDashboardUrl").value.trim(),
         powerBiUrl: document.getElementById("adminPowerBiUrl").value.trim(),
@@ -648,6 +723,7 @@ function guardarConfigAdmin() {
 }
 
 function restaurarConfigAdmin() {
+    if (!adminAutenticado()) return;
     localStorage.removeItem(ADMIN_CONFIG_KEY);
     adminConfig = {...adminDefaults};
     aplicarConfigAdmin();
@@ -888,6 +964,11 @@ window.addEventListener("resize", ajustarAltoVisor);
 document.addEventListener("click", cerrarMenus);
 document.getElementById("panelAdmin").addEventListener("click", (e) => {
     if (e.target.id === "panelAdmin") cerrarPanelAdmin();
+});
+["adminUser","adminPass"].forEach(id => {
+    document.getElementById(id).addEventListener("keydown", (e) => {
+        if (e.key === "Enter") validarAccesoAdmin();
+    });
 });
 </script>
 </body>
