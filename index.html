@@ -593,14 +593,6 @@ iframe{
                     <input id="adminScUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
                     <small>Estas dos hojas alimentan el monitoreo embebiendo parametros en la URL.</small>
                 </div>
-                <div class="admin-field">
-                    <label for="adminFormPrimerCiclo">Formulario primer ciclo</label>
-                    <input id="adminFormPrimerCiclo" type="url" placeholder="formulario_primer_ciclo.html">
-                </div>
-                <div class="admin-field">
-                    <label for="adminFormSegundoCiclo">Formulario segundo ciclo</label>
-                    <input id="adminFormSegundoCiclo" type="url" placeholder="formulario_segundo_ciclo.html">
-                </div>
                 <div class="admin-field full">
                     <label for="adminDeadline">Fecha limite del registro de resultados</label>
                     <input id="adminDeadline" type="datetime-local">
@@ -653,7 +645,10 @@ const datosPorAnio = {
         dashboard: "",
         pruebas: {},
         sistematizacion: {},
-        formularios: {}
+        formularios: {
+            primerCiclo: "formulario_primer_ciclo.html",
+            segundoCiclo: "formulario_segundo_ciclo.html"
+        }
     }
 };
 
@@ -663,6 +658,10 @@ const ADMIN_CONFIG_KEY = "sirevPrimariaAdminConfig";
 const ADMIN_SESSION_KEY = "sirevPrimariaAdminSession";
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "Sirev2026*";
+const FORMULARIOS_FIJOS = {
+    primerCiclo: "formulario_primer_ciclo.html",
+    segundoCiclo: "formulario_segundo_ciclo.html"
+};
 const adminDefaults = construirConfigAdminBase();
 let adminConfig = cargarConfigAdmin();
 let anioAdminSeleccionado = anioSeleccionado;
@@ -688,10 +687,6 @@ function construirConfigAdminBase() {
                 noviembre: datos.sistematizacion?.noviembre || "",
                 marzo: datos.sistematizacion?.marzo || "",
                 mayo: datos.sistematizacion?.mayo || ""
-            },
-            formularios: {
-                primerCiclo: datos.formularios?.primerCiclo || "",
-                segundoCiclo: datos.formularios?.segundoCiclo || ""
             },
             pcUrl: "",
             scUrl: "",
@@ -725,8 +720,7 @@ function normalizarConfigAdmin(saved) {
             ...base.years[anio],
             ...yearSaved,
             pruebas: {...base.years[anio].pruebas, ...(yearSaved.pruebas || {})},
-            sistematizacion: {...base.years[anio].sistematizacion, ...(yearSaved.sistematizacion || {})},
-            formularios: {...base.years[anio].formularios, ...(yearSaved.formularios || {})}
+            sistematizacion: {...base.years[anio].sistematizacion, ...(yearSaved.sistematizacion || {})}
         };
     });
     return base;
@@ -748,7 +742,7 @@ function aplicarConfigAdmin() {
         datosPorAnio[anio].informe = cfg.powerBiUrl || "";
         datosPorAnio[anio].pruebas = {...cfg.pruebas};
         datosPorAnio[anio].sistematizacion = {...cfg.sistematizacion};
-        datosPorAnio[anio].formularios = {...cfg.formularios};
+        datosPorAnio[anio].formularios = {...FORMULARIOS_FIJOS};
     });
     const cfgActual = configAnio(anioSeleccionado);
     fechaCierreFormularios = new Date(cfgActual.deadlineIso || "2999-12-31T23:59:00-04:00");
@@ -762,7 +756,6 @@ function configAnio(anio) {
             powerBiUrl: "",
             pruebas: {},
             sistematizacion: {},
-            formularios: {},
             pcUrl: "",
             scUrl: "",
             deadlineIso: ""
@@ -835,8 +828,6 @@ function llenarFormularioAdmin() {
     document.getElementById("adminSistMayo").value = cfg.sistematizacion?.mayo || "";
     document.getElementById("adminPcUrl").value = cfg.pcUrl || "";
     document.getElementById("adminScUrl").value = cfg.scUrl || "";
-    document.getElementById("adminFormPrimerCiclo").value = cfg.formularios?.primerCiclo || "";
-    document.getElementById("adminFormSegundoCiclo").value = cfg.formularios?.segundoCiclo || "";
     document.getElementById("adminDeadline").value = fechaIsoParaInput(cfg.deadlineIso || "");
     document.getElementById("adminStatus").textContent = "";
 }
@@ -870,10 +861,6 @@ function guardarConfigAdmin() {
             noviembre: document.getElementById("adminSistNoviembre").value.trim(),
             marzo: document.getElementById("adminSistMarzo").value.trim(),
             mayo: document.getElementById("adminSistMayo").value.trim()
-        },
-        formularios: {
-            primerCiclo: document.getElementById("adminFormPrimerCiclo").value.trim(),
-            segundoCiclo: document.getElementById("adminFormSegundoCiclo").value.trim()
         },
         pcUrl: document.getElementById("adminPcUrl").value.trim(),
         scUrl: document.getElementById("adminScUrl").value.trim(),
