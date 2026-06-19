@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>SIREV Primaria</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+    --azul:#003b71;
+    --azul-2:#005daa;
+    --azul-3:#0b73c8;
+    --azul-claro:#e9f4ff;
+    --azul-suave:#f5faff;
+    --rojo:#c8102e;
+    --dorado:#f2a900;
+    --texto:#10233f;
+    --texto-2:#4a6078;
+    --borde:#c9d9ea;
+    --fondo:#f4f8fc;
+    --blanco:#ffffff;
+    --sombra:0 14px 36px rgba(0,59,113,.14);
+    --sombra-suave:0 8px 22px rgba(0,59,113,.09);
+    --radio:18px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+    min-height:100vh;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:
+        radial-gradient(circle at top left,rgba(0,93,170,.13),transparent 34rem),
+        linear-gradient(180deg,#f8fbff 0%,#edf4fb 100%);
+    color:var(--texto);
+}
+button{font:inherit}
+
+/* =============================
+   ENCABEZADO
+   ============================= */
+.site-header{
+    background:linear-gradient(135deg,#ffffff 0%,#f2f8ff 50%,#dfefff 100%);
+    border-bottom:1px solid rgba(0,59,113,.14);
+    box-shadow:0 8px 24px rgba(0,59,113,.10);
+}
+.header-inner{
+    max-width:1480px;
+    margin:0 auto;
+    padding:1.25rem 1.25rem 1rem;
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:1.15rem;
+    align-items:center;
+}
+.logo-card{
+    width:86px;
+    height:86px;
+    border-radius:22px;
+    background:linear-gradient(145deg,#fff,#edf6ff);
+    border:1px solid rgba(0,59,113,.16);
+    box-shadow:var(--sombra-suave);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+}
+.logo-card img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    padding:9px;
+}
+.brand-kicker{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    color:var(--azul-2);
+    font-size:.84rem;
+    font-weight:850;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    margin-bottom:.18rem;
+}
+.brand-kicker::before{
+    content:"";
+    width:9px;
+    height:9px;
+    background:var(--rojo);
+    border-radius:50%;
+    box-shadow:0 0 0 4px rgba(200,16,46,.10);
+}
+.title-main{
+    font-size:clamp(2.1rem,4.1vw,3.35rem);
+    line-height:.98;
+    font-weight:950;
+    letter-spacing:-.055em;
+    color:var(--azul);
+}
+.title-sub{
+    margin-top:.42rem;
+    color:#0b4f88;
+    font-size:clamp(.95rem,1.5vw,1.1rem);
+    font-weight:750;
+    line-height:1.35;
+}
+.title-sub span{display:block;color:#10233f;font-weight:700}
+.year-pill{
+    justify-self:end;
+    display:inline-flex;
+    align-items:center;
+    gap:.55rem;
+    background:#fff;
+    color:var(--azul);
+    border:1px solid rgba(0,59,113,.16);
+    padding:.68rem 1rem;
+    border-radius:999px;
+    font-size:.92rem;
+    font-weight:850;
+    box-shadow:var(--sombra-suave);
+    white-space:nowrap;
+}
+.year-pill::before{
+    content:"Año escolar";
+    color:var(--texto-2);
+    font-weight:700;
+}
+
+/* =============================
+   NAVEGACIÓN
+   ============================= */
+.nav-band{
+    background:linear-gradient(90deg,var(--azul),#004f92);
+    border-top:1px solid rgba(255,255,255,.24);
+}
+.nav-inner{
+    max-width:1480px;
+    margin:0 auto;
+    padding:.9rem 1.25rem;
+    display:flex;
+    align-items:center;
+    gap:.7rem;
+    flex-wrap:wrap;
+}
+.dropdown{position:relative}
+.nav-btn{
+    min-height:44px;
+    display:inline-flex;
+    align-items:center;
+    gap:.55rem;
+    padding:.74rem 1.05rem;
+    border-radius:14px;
+    cursor:pointer;
+    border:1px solid rgba(255,255,255,.28);
+    background:rgba(255,255,255,.11);
+    color:#fff;
+    font-weight:850;
+    box-shadow:0 8px 22px rgba(0,23,51,.16);
+    transition:transform .12s ease,background .12s ease,border-color .12s ease;
+}
+.nav-btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.42)}
+.nav-btn.primary{background:#fff;color:var(--azul);border-color:#fff}
+.nav-btn .chev{font-size:.85rem;opacity:.86}
+.dropdown-content{
+    display:none;
+    position:absolute;
+    top:calc(100% + 8px);
+    left:0;
+    min-width:290px;
+    background:#fff;
+    border:1px solid var(--borde);
+    border-radius:16px;
+    box-shadow:0 18px 44px rgba(0,43,84,.20);
+    overflow:hidden;
+    z-index:1000;
+}
+.dropdown-content.show{display:block}
+.dropdown-content button,
+.dropdown-content span{
+    display:flex;
+    width:100%;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+    padding:13px 15px;
+    border:none;
+    background:#fff;
+    color:var(--texto);
+    text-align:left;
+    cursor:pointer;
+    font-weight:750;
+    border-bottom:1px solid #edf2f7;
+}
+.dropdown-content button:last-child,.dropdown-content span:last-child{border-bottom:0}
+.dropdown-content button:hover{background:var(--azul-claro);color:var(--azul)}
+.dropdown-content span{color:#98a6b5;cursor:default}
+.nav-spacer{flex:1}
+.quick-note{
+    color:#eaf5ff;
+    font-size:.88rem;
+    font-weight:700;
+    opacity:.92;
+    white-space:nowrap;
+}
+.countdown-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.62rem .9rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.34);
+    background:rgba(255,255,255,.13);
+    color:#fff;
+    font-size:.88rem;
+    font-weight:850;
+    white-space:nowrap;
+    box-shadow:0 8px 22px rgba(0,23,51,.14);
+}
+.countdown-pill::before{
+    content:"⏳";
+    font-size:1rem;
+}
+.countdown-pill.cerrado{
+    background:rgba(200,16,46,.24);
+    border-color:rgba(255,255,255,.42);
+}
+.countdown-pill.cerrado::before{
+    content:"🔒";
+}
+
+.admin-modal{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:1rem;
+    background:rgba(5,25,48,.58);
+    z-index:3000;
+}
+.admin-modal.show{display:flex}
+.admin-card{
+    width:min(760px,100%);
+    max-height:92vh;
+    overflow:auto;
+    background:#fff;
+    border:1px solid var(--borde);
+    border-radius:18px;
+    box-shadow:0 24px 70px rgba(0,23,51,.32);
+}
+.admin-head{
+    display:flex;
+    justify-content:space-between;
+    gap:1rem;
+    align-items:flex-start;
+    padding:1.05rem 1.15rem;
+    border-bottom:1px solid #e7eef6;
+}
+.admin-head h2{font-size:1.2rem;color:var(--azul);line-height:1.2}
+.admin-head p{margin-top:.2rem;color:var(--texto-2);font-size:.9rem}
+.admin-close{
+    border:0;
+    background:#eef4fb;
+    color:var(--azul);
+    width:36px;
+    height:36px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:900;
+}
+.admin-body{padding:1rem 1.15rem 1.15rem}
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
+.admin-field{display:flex;flex-direction:column;gap:.35rem}
+.admin-field.full{grid-column:1 / -1}
+.admin-field label{font-weight:850;color:var(--texto);font-size:.86rem}
+.admin-field input{
+    width:100%;
+    border:1px solid var(--borde);
+    border-radius:12px;
+    padding:.72rem .8rem;
+    color:var(--texto);
+    background:#fbfdff;
+}
+.admin-field small{color:var(--texto-2);font-size:.78rem;line-height:1.35}
+.admin-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:.6rem;
+    flex-wrap:wrap;
+    margin-top:1rem;
+}
+.admin-action{
+    min-height:40px;
+    border-radius:12px;
+    border:1px solid var(--borde);
+    padding:.65rem .9rem;
+    cursor:pointer;
+    font-weight:850;
+    background:#fff;
+    color:var(--azul);
+}
+.admin-action.primary{background:var(--azul);color:#fff;border-color:var(--azul)}
+.admin-status{margin-top:.75rem;color:var(--texto-2);font-weight:750;font-size:.86rem}
+
+/* =============================
+   MAIN
+   ============================= */
+main{
+    max-width:1480px;
+    margin:0 auto;
+    padding:1rem 1.25rem 1.6rem;
+}
+.resource-card{
+    background:#fff;
+    border:1px solid var(--borde);
+    border-radius:var(--radio);
+    box-shadow:var(--sombra-suave);
+    margin-bottom:1rem;
+    overflow:hidden;
+}
+.resource-head{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:1rem;
+    align-items:center;
+    padding:1rem 1.1rem;
+    border-left:6px solid var(--rojo);
+}
+.resource-title-wrap{min-width:0}
+.resource-eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:.42rem;
+    color:var(--azul-2);
+    font-size:.78rem;
+    font-weight:850;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:.2rem;
+}
+.resource-eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--dorado)}
+.resource-head h2{
+    color:var(--azul);
+    font-size:1.12rem;
+    font-weight:900;
+    letter-spacing:-.015em;
+}
+.resource-head p{
+    margin-top:.25rem;
+    color:var(--texto-2);
+    font-size:.94rem;
+    line-height:1.4;
+}
+.status-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.48rem;
+    padding:.64rem .86rem;
+    border-radius:999px;
+    background:var(--azul-claro);
+    color:var(--azul);
+    border:1px solid var(--borde);
+    font-size:.88rem;
+    font-weight:850;
+    white-space:nowrap;
+}
+.status-pill::before{content:"";width:8px;height:8px;background:var(--rojo);border-radius:50%}
+.report-container{
+    width:100%;
+    min-height:0;
+    background:#fff;
+    border-radius:var(--radio);
+    overflow:hidden;
+    box-shadow:var(--sombra);
+    border:1px solid var(--borde);
+    position:relative;
+}
+.report-container::before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto 0;
+    height:4px;
+    background:linear-gradient(90deg,var(--azul),var(--rojo),var(--dorado));
+    z-index:2;
+}
+iframe{
+    width:100%;
+    height:720px;
+    min-height:0;
+    border:none;
+    display:block;
+    background:#fff;
+}
+.footer{
+    text-align:center;
+    color:#52667a;
+    font-size:.9rem;
+    margin:1.25rem 0 .6rem;
+}
+.footer strong{color:var(--azul)}
+
+@media(max-width:900px){
+    .header-inner{grid-template-columns:auto 1fr;align-items:center}
+    .year-pill{grid-column:1 / -1;justify-self:start}
+    .nav-inner{display:grid;grid-template-columns:1fr;gap:.6rem}
+    .dropdown,.nav-btn{width:100%}
+    .nav-btn{justify-content:space-between}
+    .nav-spacer,.quick-note{display:none}
+    .countdown-pill{width:100%;justify-content:center}
+    .admin-grid{grid-template-columns:1fr}
+    .resource-head{grid-template-columns:1fr}
+    .status-pill{justify-self:start}
+    iframe{min-height:640px;height:75vh}
+}
+@media(max-width:560px){
+    .header-inner{grid-template-columns:1fr;text-align:center}
+    .logo-card{margin:0 auto;width:76px;height:76px}
+    .brand-kicker{justify-content:center}
+    .year-pill{justify-self:center}
+    main{padding:.9rem .8rem 1.3rem}
+}
+</style>
+</head>
+
+<body>
+<header class="site-header">
+    <div class="header-inner">
+        <div class="logo-card" aria-label="Logo del Ministerio de Educación">
+            <img src="logominerd.jpeg" alt="Logo del Ministerio de Educación" onerror="this.parentElement.style.display='none'">
+        </div>
+
+        <div class="brand-block">
+            <div class="brand-kicker">Sistema de Resultados de Evaluaciones del Nivel Primario</div>
+            <h1 class="title-main">SIREV Primaria</h1>
+            <div class="title-sub">
+                Ministerio de Educación · Viceministerio de Servicios Técnicos y Pedagógicos
+                <span>Dirección de Educación Primaria</span>
+            </div>
+        </div>
+
+        <div class="year-pill"><span id="anioActualTexto">2025-2026</span></div>
+    </div>
+
+    <nav class="nav-band" aria-label="Navegación principal de SIREV Primaria">
+        <div class="nav-inner">
+            <div class="dropdown">
+                <button class="nav-btn" onclick="toggleMenu('menuAnio', event)">Año escolar <span class="chev">▼</span></button>
+                <div id="menuAnio" class="dropdown-content">
+                    <button onclick="seleccionarAnio('2025-2026')">2025-2026</button>
+                    <button onclick="seleccionarAnio('2026-2027')">2026-2027</button>
+                </div>
+            </div>
+
+            <div class="dropdown">
+                <button class="nav-btn primary" onclick="toggleMenu('menuDashboards', event)">Dashboards <span class="chev">▼</span></button>
+                <div id="menuDashboards" class="dropdown-content">
+                    <button onclick="abrirDashboard('sirevInteractivo')">Dashboard interactivo SIREV</button>
+                    <button onclick="abrirDashboard('powerbi')">Informe Power BI</button>
+                </div>
+            </div>
+
+            <div class="dropdown">
+                <button class="nav-btn" onclick="toggleMenu('menuPruebas', event)">Pruebas y rúbricas <span class="chev">▼</span></button>
+                <div id="menuPruebas" class="dropdown-content">
+                    <button onclick="abrirRecurso('pruebas','septiembre')">Septiembre</button>
+                    <button onclick="abrirRecurso('pruebas','noviembre')">Noviembre</button>
+                    <button onclick="abrirRecurso('pruebas','marzo')">Marzo</button>
+                    <button onclick="abrirRecurso('pruebas','mayo')">Mayo</button>
+                </div>
+            </div>
+
+            <button class="nav-btn" onclick="abrirMonitoreo()">Monitoreo de registros</button>
+            <button class="nav-btn" onclick="abrirPanelAdmin(event)">Administrador</button>
+
+            <div class="dropdown">
+                <button class="nav-btn" onclick="toggleMenu('menuFormularios', event)">Registro de resultados <span class="chev">▼</span></button>
+                <div id="menuFormularios" class="dropdown-content">
+                    <button onclick="abrirFormulario('primerCiclo')">Primer ciclo</button>
+                    <button onclick="abrirFormulario('segundoCiclo')">Segundo ciclo</button>
+                </div>
+            </div>
+
+            <div class="nav-spacer"></div>
+            <div id="conteoCierreFormularios" class="countdown-pill" aria-live="polite">Registro abierto</div>
+            <div id="quickNote" class="quick-note"></div>
+    </nav>
+</header>
+
+<div id="panelAdmin" class="admin-modal" aria-hidden="true">
+    <div class="admin-card" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+        <div class="admin-head">
+            <div>
+                <h2 id="adminTitle">Configuracion de fuentes de datos</h2>
+                <p>Ingrese URLs publicadas de Google Sheets o enlaces directos para actualizar las entradas de la plataforma.</p>
+            </div>
+            <button class="admin-close" onclick="cerrarPanelAdmin()" aria-label="Cerrar">X</button>
+        </div>
+        <div class="admin-body">
+            <div class="admin-grid">
+                <div class="admin-field full">
+                    <label for="adminDashboardUrl">Dashboard interactivo SIREV</label>
+                    <input id="adminDashboardUrl" type="url" placeholder="dashboard_sirev_primaria_v41_admin.html">
+                    <small>Puede ser un HTML local o una URL publicada. Si usa el dashboard local, se conservan sus datos empaquetados actuales.</small>
+                </div>
+                <div class="admin-field full">
+                    <label for="adminPowerBiUrl">Informe Power BI</label>
+                    <input id="adminPowerBiUrl" type="url" placeholder="https://app.powerbi.com/view?...">
+                </div>
+                <div class="admin-field full">
+                    <label for="adminMonitoreoUrl">Monitoreo de sistematizacion</label>
+                    <input id="adminMonitoreoUrl" type="url" placeholder="monitoreo_sistematizacion_admin.html">
+                </div>
+                <div class="admin-field">
+                    <label for="adminPcUrl">Hoja primer ciclo</label>
+                    <input id="adminPcUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                    <small>Se acepta URL publicada CSV o enlace de Google Sheets.</small>
+                </div>
+                <div class="admin-field">
+                    <label for="adminScUrl">Hoja segundo ciclo</label>
+                    <input id="adminScUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                    <small>Estas dos hojas alimentan el monitoreo embebiendo parametros en la URL.</small>
+                </div>
+                <div class="admin-field full">
+                    <label for="adminDeadline">Fecha limite del registro de resultados</label>
+                    <input id="adminDeadline" type="datetime-local">
+                    <small>Esta fecha controla el contador del portal y el cierre de los formularios locales.</small>
+                </div>
+            </div>
+            <div class="admin-actions">
+                <button class="admin-action" onclick="restaurarConfigAdmin()">Restaurar valores</button>
+                <button class="admin-action primary" onclick="guardarConfigAdmin()">Guardar y aplicar</button>
+            </div>
+            <div id="adminStatus" class="admin-status" aria-live="polite"></div>
+        </div>
+    </div>
+</div>
+
+<main>
+    <div class="report-container full-focus">
+        <iframe id="visorInforme" title="Visor SIREV Primaria" src="dashboard_sirev_primaria_v41_admin.html?v=46"></iframe>
+    </div>
+</main>
+
+<footer class="footer">
+    © 2026 Ministerio de Educación – Desarrollado por <strong>Aneudy Minier</strong>
+</footer>
+
+<script>
+const datosPorAnio = {
+    "2025-2026": {
+        informe: "https://app.powerbi.com/view?r=eyJrIjoiZWE0NjFhYWYtY2M5ZS00ZDQ4LWFiZDAtNmU1ZGZkYTVjNWViIiwidCI6IjY2ZTI4OThiLTJjMzUtNDMzZi1hNzUzLWJkNjRhY2EzOWFmYiIsImMiOjF9",
+        dashboard: "dashboard_sirev_primaria_v41_admin.html?v=46",
+        pruebas: {
+            septiembre: "https://drive.google.com/drive/folders/1DVgvr8SuIApyFKk2kQUaZjy2c736xGZh",
+            noviembre: "https://drive.google.com/drive/folders/1mHf3_gLi4ZIj_YLRPB0-CYh0b_Y1CMWV",
+            marzo: "https://drive.google.com/drive/folders/1JP1DCceZfuHuNL4FxIySqalPvCh36SAb",
+            mayo: ""
+        },
+        sistematizacion: {
+            septiembre: "https://aminier06.github.io/sistematizacionsept-nov-mar/?mes=septiembre",
+            noviembre: "https://aminier06.github.io/sistematizacionsept-nov-mar/?mes=noviembre",
+            marzo: "https://aminier06.github.io/sistematizacionsept-nov-mar/?mes=marzo",
+            mayo: "monitoreo_sistematizacion_admin.html"
+        },
+        formularios: {
+            primerCiclo: "formulario_primer_ciclo.html",
+            segundoCiclo: "formulario_segundo_ciclo.html"
+        }
+    },
+    "2026-2027": {
+        informe: "",
+        dashboard: "",
+        pruebas: {},
+        sistematizacion: {},
+        formularios: {}
+    }
+};
+
+let anioSeleccionado = "2025-2026";
+let dashboardActual = "sirevInteractivo";
+const ADMIN_CONFIG_KEY = "sirevPrimariaAdminConfig";
+const adminDefaults = {
+    dashboardUrl: datosPorAnio["2025-2026"].dashboard,
+    powerBiUrl: datosPorAnio["2025-2026"].informe,
+    monitoreoUrl: datosPorAnio["2025-2026"].sistematizacion.mayo,
+    pcUrl: "",
+    scUrl: "",
+    deadlineIso: "2026-06-12T14:00:00-04:00"
+};
+let adminConfig = cargarConfigAdmin();
+
+function cargarConfigAdmin() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(ADMIN_CONFIG_KEY) || "{}");
+        return {...adminDefaults, ...saved};
+    } catch (e) {
+        return {...adminDefaults};
+    }
+}
+
+function aplicarConfigAdmin() {
+    datosPorAnio["2025-2026"].dashboard = adminConfig.dashboardUrl || adminDefaults.dashboardUrl;
+    datosPorAnio["2025-2026"].informe = adminConfig.powerBiUrl || adminDefaults.powerBiUrl;
+    datosPorAnio["2025-2026"].sistematizacion.mayo = adminConfig.monitoreoUrl || adminDefaults.monitoreoUrl;
+    fechaCierreFormularios = new Date(adminConfig.deadlineIso || adminDefaults.deadlineIso);
+    mensajeCierreFormularios = "El registro de resultados cerró el " + formatearFechaCierre(fechaCierreFormularios) + ".";
+}
+
+function abrirPanelAdmin(e) {
+    if (e) e.stopPropagation();
+    cerrarMenus();
+    llenarFormularioAdmin();
+    const panel = document.getElementById("panelAdmin");
+    panel.classList.add("show");
+    panel.setAttribute("aria-hidden", "false");
+}
+
+function cerrarPanelAdmin() {
+    const panel = document.getElementById("panelAdmin");
+    panel.classList.remove("show");
+    panel.setAttribute("aria-hidden", "true");
+}
+
+function llenarFormularioAdmin() {
+    document.getElementById("adminDashboardUrl").value = adminConfig.dashboardUrl || "";
+    document.getElementById("adminPowerBiUrl").value = adminConfig.powerBiUrl || "";
+    document.getElementById("adminMonitoreoUrl").value = adminConfig.monitoreoUrl || "";
+    document.getElementById("adminPcUrl").value = adminConfig.pcUrl || "";
+    document.getElementById("adminScUrl").value = adminConfig.scUrl || "";
+    document.getElementById("adminDeadline").value = fechaIsoParaInput(adminConfig.deadlineIso || adminDefaults.deadlineIso);
+    document.getElementById("adminStatus").textContent = "";
+}
+
+function guardarConfigAdmin() {
+    adminConfig = {
+        dashboardUrl: document.getElementById("adminDashboardUrl").value.trim(),
+        powerBiUrl: document.getElementById("adminPowerBiUrl").value.trim(),
+        monitoreoUrl: document.getElementById("adminMonitoreoUrl").value.trim(),
+        pcUrl: document.getElementById("adminPcUrl").value.trim(),
+        scUrl: document.getElementById("adminScUrl").value.trim(),
+        deadlineIso: inputFechaAIso(document.getElementById("adminDeadline").value)
+    };
+    localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(adminConfig));
+    aplicarConfigAdmin();
+    document.getElementById("adminStatus").textContent = "Configuracion guardada en este navegador.";
+    actualizarConteoCierreFormularios();
+    if (dashboardActual === "sirevInteractivo") abrirDashboard("sirevInteractivo");
+}
+
+function restaurarConfigAdmin() {
+    localStorage.removeItem(ADMIN_CONFIG_KEY);
+    adminConfig = {...adminDefaults};
+    aplicarConfigAdmin();
+    llenarFormularioAdmin();
+    if (dashboardActual === "sirevInteractivo") abrirDashboard("sirevInteractivo");
+    actualizarConteoCierreFormularios();
+    document.getElementById("adminStatus").textContent = "Se restauraron los valores originales.";
+}
+
+function agregarParametrosAdmin(url) {
+    if (!url) return url;
+    const params = new URLSearchParams();
+    if (adminConfig.pcUrl) params.set("pcUrl", adminConfig.pcUrl);
+    if (adminConfig.scUrl) params.set("scUrl", adminConfig.scUrl);
+    const query = params.toString();
+    if (!query) return url;
+    return url + (url.includes("?") ? "&" : "?") + query;
+}
+
+function agregarParametrosFormulario(url) {
+    if (!url) return url;
+    const params = new URLSearchParams();
+    params.set("cierre", adminConfig.deadlineIso || adminDefaults.deadlineIso);
+    return url + (url.includes("?") ? "&" : "?") + params.toString();
+}
+
+function fechaIsoParaInput(iso) {
+    const m = String(iso || "").match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+    return m ? m[1] : "";
+}
+
+function inputFechaAIso(value) {
+    return value ? value + ":00-04:00" : adminDefaults.deadlineIso;
+}
+
+function formatearFechaCierre(date) {
+    return date.toLocaleString("es-DO", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZone: "America/Santo_Domingo"
+    });
+}
+
+// Fecha y hora de cierre del registro de resultados.
+// Se usa la zona horaria de República Dominicana (UTC-04:00).
+let fechaCierreFormularios = new Date(adminDefaults.deadlineIso);
+let mensajeCierreFormularios = "El registro de resultados cerró el " + formatearFechaCierre(fechaCierreFormularios) + ".";
+
+function formulariosEstanDisponibles() {
+    return new Date() < fechaCierreFormularios;
+}
+
+function actualizarConteoCierreFormularios() {
+    const contenedor = document.getElementById("conteoCierreFormularios");
+    if (!contenedor) return;
+
+    const ahora = new Date();
+    const diferencia = fechaCierreFormularios - ahora;
+
+    if (diferencia <= 0) {
+        contenedor.textContent = "Registro cerrado";
+        contenedor.classList.add("cerrado");
+        return;
+    }
+
+    contenedor.classList.remove("cerrado");
+
+    const totalSegundos = Math.floor(diferencia / 1000);
+    const dias = Math.floor(totalSegundos / 86400);
+    const horas = Math.floor((totalSegundos % 86400) / 3600);
+    const minutos = Math.floor((totalSegundos % 3600) / 60);
+    const segundos = totalSegundos % 60;
+
+    const partes = [];
+    if (dias > 0) partes.push(`${dias} d`);
+    partes.push(`${String(horas).padStart(2, "0")} h`);
+    partes.push(`${String(minutos).padStart(2, "0")} min`);
+    partes.push(`${String(segundos).padStart(2, "0")} s`);
+
+    contenedor.textContent = `Cierre del registro en ${partes.join(" · ")}`;
+}
+
+function seleccionarAnio(anio) {
+    anioSeleccionado = anio;
+    document.getElementById("anioActualTexto").textContent = anio;
+    if (dashboardActual === "sirevInteractivo") abrirDashboard("sirevInteractivo");
+    else abrirDashboard("powerbi");
+
+    cerrarMenus();
+}
+
+function abrirDashboard(tipo) {
+    dashboardActual = tipo;
+    const visor = document.getElementById("visorInforme");
+    const quickNote = document.getElementById("quickNote");
+    let url = "";
+
+    if (tipo === "sirevInteractivo") {
+        url = datosPorAnio[anioSeleccionado].dashboard;
+        visor.title = "Dashboard interactivo SIREV Primaria";
+        if (quickNote) quickNote.textContent = "Dashboard interactivo · datos consolidados";
+    } else {
+        url = datosPorAnio[anioSeleccionado].informe;
+        visor.title = "Evaluación Diagnóstica y de Seguimiento Nivel Primario 2025-2026";
+        if (quickNote) quickNote.textContent = "Informe general · Power BI";
+    }
+
+    if (url) {
+        if (tipo === "sirevInteractivo") url = agregarParametrosAdmin(url);
+        visor.src = url;
+
+        // Power BI se carga desde otro dominio; por seguridad del navegador no puede medirse
+        // su altura interna. Por eso se fija una altura institucional suficiente.
+        if (tipo === "powerbi") {
+            visor.style.height = "1060px";
+            visor.style.minHeight = "850px";
+            visor.scrolling = "auto";
+        } else {
+            visor.style.height = "720px";
+            visor.style.minHeight = "0";
+            setTimeout(ajustarAltoVisor, 500);
+        }
+    } else {
+        visor.src = "about:blank";
+        alert("Este recurso no está disponible todavía para el año escolar seleccionado.");
+    }
+
+    cerrarMenus();
+}
+
+function abrirRecurso(tipo, mes) {
+    const url = datosPorAnio[anioSeleccionado][tipo]?.[mes];
+    if (url) window.open(url, "_blank");
+    else alert("Recurso no disponible para este año escolar.");
+    cerrarMenus();
+}
+
+function abrirMonitoreo() {
+    const url = datosPorAnio[anioSeleccionado].sistematizacion?.mayo;
+    if (url) window.open(agregarParametrosAdmin(url), "_blank");
+    else alert("Monitoreo no disponible para este año escolar.");
+    cerrarMenus();
+}
+
+function abrirFormulario(ciclo) {
+    if (!formulariosEstanDisponibles()) {
+        alert(mensajeCierreFormularios);
+        cerrarMenus();
+        return;
+    }
+
+    const url = datosPorAnio[anioSeleccionado].formularios?.[ciclo];
+    if (url) window.open(agregarParametrosFormulario(url), "_blank");
+    else alert("Formulario no disponible para este año escolar.");
+    cerrarMenus();
+}
+
+function toggleMenu(id, e) {
+    e.stopPropagation();
+    const menu = document.getElementById(id);
+    const estabaAbierto = menu.classList.contains("show");
+    cerrarMenus();
+    if (!estabaAbierto) menu.classList.add("show");
+}
+
+function cerrarMenus() {
+    document.querySelectorAll(".dropdown-content").forEach(menu => menu.classList.remove("show"));
+}
+
+
+function ajustarAltoVisor() {
+    const iframe = document.getElementById("visorInforme");
+    if (!iframe) return;
+
+    // Solo se ajusta automáticamente el dashboard local de SIREV.
+    // El informe Power BI es externo y debe conservar altura fija.
+    if (dashboardActual === "powerbi") {
+        iframe.style.height = "1060px";
+        iframe.style.minHeight = "850px";
+        return;
+    }
+    try {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        if (!doc || !doc.body) return;
+
+        // Evita el espacio en blanco circular: si se mide con un iframe muy alto,
+        // el documento interno puede reportar ese mismo alto como scrollHeight.
+        const y = window.scrollY;
+        iframe.style.height = "1px";
+
+        requestAnimationFrame(() => {
+            const candidates = [
+                doc.body.scrollHeight,
+                doc.documentElement.scrollHeight,
+                doc.body.offsetHeight,
+                doc.documentElement.offsetHeight
+            ].filter(Number.isFinite);
+
+            const h = Math.max(...candidates, 620);
+            iframe.style.height = (h + 8) + "px";
+            iframe.style.minHeight = "0";
+            iframe.scrolling = "no";
+            window.scrollTo(window.scrollX, y);
+        });
+    } catch (e) {
+        iframe.style.height = "720px";
+        iframe.style.minHeight = "0";
+    }
+}
+
+let resizeObserverSirev = null;
+const visorSirev = document.getElementById("visorInforme");
+if (visorSirev) {
+    visorSirev.addEventListener("load", () => {
+        ajustarAltoVisor();
+        setTimeout(ajustarAltoVisor, 300);
+        setTimeout(ajustarAltoVisor, 900);
+        setTimeout(ajustarAltoVisor, 1800);
+
+        try {
+            const doc = visorSirev.contentDocument || visorSirev.contentWindow.document;
+            if (resizeObserverSirev) resizeObserverSirev.disconnect();
+            resizeObserverSirev = new ResizeObserver(() => ajustarAltoVisor());
+            resizeObserverSirev.observe(doc.body);
+        } catch (e) {}
+    });
+}
+aplicarConfigAdmin();
+abrirDashboard("sirevInteractivo");
+actualizarConteoCierreFormularios();
+setInterval(actualizarConteoCierreFormularios, 1000);
+
+window.addEventListener("resize", ajustarAltoVisor);
+document.addEventListener("click", cerrarMenus);
+document.getElementById("panelAdmin").addEventListener("click", (e) => {
+    if (e.target.id === "panelAdmin") cerrarPanelAdmin();
+});
+</script>
+</body>
+</html>

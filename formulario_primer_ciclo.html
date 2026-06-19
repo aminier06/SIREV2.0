@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistematización Evaluación de Seguimiento - Primer Ciclo</title>
+  <style>
+    :root {
+      --azul: #123c69;
+      --azul2: #0b5d8b;
+      --gris: #f3f6f9;
+      --borde: #d9e2ec;
+      --texto: #1f2933;
+      --error: #b00020;
+      --ok: #0b6b3a;
+      --alerta: #fff4e5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #eef3f7;
+      color: var(--texto);
+      line-height: 1.45;
+    }
+    header {
+      background: linear-gradient(135deg, var(--azul), var(--azul2));
+      color: white;
+      padding: 28px 18px;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.35rem, 3vw, 2rem);
+    }
+    header p {
+      max-width: 980px;
+      margin: 0 auto;
+      font-size: 0.98rem;
+      opacity: .95;
+    }
+    main {
+      max-width: 1120px;
+      margin: 22px auto 60px;
+      padding: 0 14px;
+    }
+    .card {
+      background: white;
+      border: 1px solid var(--borde);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 22px rgba(16, 42, 67, .07);
+    }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.18rem;
+      color: var(--azul);
+    }
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 1rem;
+      color: #243b53;
+    }
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .required::after {
+      content: " *";
+      color: var(--error);
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 11px;
+      border: 1px solid #bcccdc;
+      border-radius: 9px;
+      font-size: 0.95rem;
+      background: white;
+    }
+    input[type="number"] { text-align: right; }
+.grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .field { margin-bottom: 12px; }
+    .help {
+      font-size: .86rem;
+      color: #52606d;
+      margin-top: 4px;
+    }
+    .section-description {
+      background: var(--gris);
+      border-left: 4px solid var(--azul2);
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    .indicator-group {
+      border: 1px solid var(--borde);
+      border-radius: 12px;
+      padding: 14px;
+      margin: 14px 0;
+      background: #fbfdff;
+    }
+    .indicator-title {
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .sum-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 10px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      background: #eef8f1;
+      color: var(--ok);
+      font-weight: 700;
+      font-size: .92rem;
+    }
+    .sum-line.error {
+      background: #fdecea;
+      color: var(--error);
+    }
+    .sum-line.warning {
+      background: var(--alerta);
+      color: #7a4b00;
+    }
+    .centro-ok { color: var(--ok); font-weight: 700; }
+    .centro-error { color: var(--error); font-weight: 700; }
+    .error-msg {
+      color: var(--error);
+      font-weight: 700;
+      font-size: .88rem;
+      margin-top: 7px;
+      display: none;
+    }
+    .global-error {
+      display: none;
+      background: #fdecea;
+      color: var(--error);
+      border: 1px solid #f5b7b1;
+      padding: 13px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+
+    .cierre-aviso {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-left: 5px solid #f97316;
+      color: #7c2d12;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      font-weight: 700;
+      box-shadow: 0 6px 16px rgba(16, 42, 67, .06);
+    }
+    .cierre-aviso.cerrado {
+      background: #fdecea;
+      border-color: #f5b7b1;
+      border-left-color: var(--error);
+      color: var(--error);
+    }
+    .cierre-aviso small {
+      display: block;
+      margin-top: 4px;
+      font-weight: 400;
+      color: inherit;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      position: sticky;
+      bottom: 0;
+      background: rgba(238, 243, 247, .94);
+      padding: 14px 0;
+      backdrop-filter: blur(4px);
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: .95rem;
+    }
+    .primary { background: var(--azul); color: white; }
+    .secondary { background: #d9e2ec; color: #102a43; }
+    footer {
+      text-align: center;
+      color: #52606d;
+      padding: 18px;
+      font-size: .85rem;
+    }
+
+
+    .modal-responsable {
+      position: fixed;
+      inset: 0;
+      background: rgba(16, 42, 67, .55);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .modal-contenido {
+      background: white;
+      width: min(520px, 100%);
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .22);
+    }
+    .modal-contenido h2 {
+      margin-top: 0;
+    }
+    .modal-acciones {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 760px) {
+      .grid, .grid-3 { grid-template-columns: 1fr; }
+      .actions { justify-content: stretch; }
+      button { width: 100%; }
+
+      .modal-acciones { flex-direction: column; }
+    }
+    @media print {
+      body { background: white; }
+      .actions { display: none; }
+      .card { box-shadow: none; page-break-inside: avoid; }
+      header { background: white; color: black; border-bottom: 2px solid #000; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sistematización Evaluación de Seguimiento Primer Ciclo, Nivel Primario</h1>
+    <p>Instrumento para registrar las cantidades generales por grado, área evaluada, nivel de lectura e indicadores de desempeño.</p>
+  </header>
+
+  <main>
+    <iframe name="iframeEnvio" id="iframeEnvio" style="display:none;"></iframe>
+    <div id="avisoCierreFormulario" class="cierre-aviso" role="status" aria-live="polite"></div>
+      <form id="formularioEvaluacion" method="POST" action="https://script.google.com/macros/s/AKfycbwTYuo9VnsRIAbnIuexy0Q69DR792fjMT-48lYtDxj9ruwaY21QBie6e_Yvtr0aB69n/exec" target="iframeEnvio" novalidate>
+        <input type="hidden" id="fecha_envio" name="fecha_envio" />
+        <input type="hidden" id="origen" name="origen" value="Formulario HTML Primer Ciclo Marzo" />
+        <input type="hidden" id="responsable_nombre" name="responsable_nombre" />
+        <input type="hidden" id="responsable_cedula" name="responsable_cedula" />
+        <input type="hidden" id="responsable_telefono" name="responsable_telefono" />
+      <section class="card">
+        <h2>Datos generales del centro educativo</h2>
+        <div class="grid">
+          <div class="field">
+            <label for="correo" class="required">Correo</label>
+            <input type="email" id="correo" name="correo" required />
+          </div>
+          <div class="field">
+            <label for="sigerd" class="required">Código SIGERD del centro educativo</label>
+            <input type="text" id="sigerd" name="sigerd" pattern="\d{5}" maxlength="5" inputmode="numeric" required />
+            <div class="help">Debe contener exactamente 5 dígitos.</div><div id="centroStatus" class="help"></div>
+          </div>
+          <div class="field">
+            <label for="centro" class="required">Nombre completo del centro educativo</label>
+            <input type="text" id="centro" name="centro" required readonly />
+          </div>
+          <div class="field">
+            <label for="regional" class="required">Regional</label>
+            <input type="text" id="regional" name="regional" required readonly />
+          </div>
+          <div class="field">
+            <label for="distrito" class="required">Distrito Educativo</label>
+            <input type="text" id="distrito" name="distrito" required readonly />
+          </div>
+          
+          <div class="field">
+            <label for="sector" class="required">Sector</label>
+            <input type="text" id="sector" name="sector" readonly required />
+            <div class="help">Se completa automáticamente al escribir el código SIGERD.</div>
+          </div>
+<div class="field">
+            <label for="tipo" class="required">Tipo</label>
+            <select id="tipo" name="tipo" required>
+              <option value="">Seleccione...</option>
+              <option>Regular</option>
+              <option>Multigrado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="tanda" class="required">Tanda del centro</label>
+            <select id="tanda" name="tanda" required>
+              <option value="">Seleccione...</option>
+              <option>Matutina</option>
+              <option>Vespertina</option>
+              <option>Jornada escolar extendida</option>
+            </select>
+            <div class="help">Si el centro es matutino y vespertino, debe llenarse el formulario por cada tanda.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Matrícula por grado</h2>
+        <div class="grid-3">
+          <div class="field">
+            <label for="matricula_g1" class="required">Cantidad de niños inscritos en primer grado</label>
+            <input type="number" id="matricula_g1" name="matricula_g1" min="0" step="1" required />
+          </div>
+          <div class="field">
+            <label for="matricula_g2" class="required">Cantidad de niños inscritos en segundo grado</label>
+            <input type="number" id="matricula_g2" name="matricula_g2" min="0" step="1" required />
+          </div>
+          <div class="field">
+            <label for="matricula_g3" class="required">Cantidad de niños inscritos en tercer grado</label>
+            <input type="number" id="matricula_g3" name="matricula_g3" min="0" step="1" required />
+          </div>
+        </div>
+      </section>
+
+      <div id="globalError" class="global-error">Revise el formulario: hay uno o más indicadores cuya suma excede la matrícula del grado correspondiente.</div>
+      <div id="sectionsContainer"></div>
+
+      <div class="actions">
+        <button type="button" class="secondary" id="btnImprimir" onclick="window.print()">Imprimir / Guardar PDF</button>
+        <button type="reset" class="secondary">Limpiar formulario</button>
+        <button type="submit" class="primary" id="btnEnviar">Validar y enviar</button>
+      </div>
+    </form>
+
+
+    <div id="modalResponsable" class="modal-responsable" role="dialog" aria-modal="true" aria-labelledby="tituloModalResponsable">
+      <div class="modal-contenido">
+        <h2 id="tituloModalResponsable">Datos de la persona que realiza el envío</h2>
+        <p class="help">Estos datos se registrarán junto con la respuesta enviada.</p>
+
+        <div class="field">
+          <label for="modal_responsable_nombre" class="required">Nombre completo</label>
+          <input type="text" id="modal_responsable_nombre" autocomplete="name" />
+        </div>
+
+        <div class="field">
+          <label for="modal_responsable_cedula" class="required">Cédula</label>
+          <input type="text" id="modal_responsable_cedula" inputmode="numeric" maxlength="13" autocomplete="off" />
+          <div class="help">Puede escribirla con o sin guiones.</div>
+        </div>
+
+        <div class="field">
+          <label for="modal_responsable_telefono" class="required">Teléfono</label>
+          <input type="tel" id="modal_responsable_telefono" maxlength="14" autocomplete="tel" />
+        </div>
+
+        <div class="modal-acciones">
+          <button type="button" class="secondary" onclick="cerrarModalResponsable()">Cancelar</button>
+          <button type="button" class="primary" onclick="confirmarDatosResponsable()">Confirmar y enviar</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+  © 2026 Ministerio de Educación – Desarrollado por Aneudy Minier
+</footer>
+  <script>
+    // PEGUE AQUÍ LA URL DE IMPLEMENTACIÓN DE GOOGLE APPS SCRIPT.
+    // Debe terminar normalmente en /exec
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxxVEYFwhSvPWNmqbRZw6yihIZ3i3OYOMQIAMYJiuFXMES1W4GNEVGx4cERpfPUznN8/exec"; // Debe coincidir con el action del formulario
+
+    // Fecha de cierre del formulario. El portal puede enviarla por ?cierre=ISO.
+    // Se usa la zona horaria de República Dominicana (-04:00).
+    function obtenerFechaCierreFormulario() {
+      const params = new URLSearchParams(location.search);
+      const valor = params.get("cierre") || "2026-06-12T14:00:00-04:00";
+      const fecha = new Date(valor);
+      return Number.isNaN(fecha.getTime()) ? new Date("2026-06-12T14:00:00-04:00") : fecha;
+    }
+    const FECHA_CIERRE_FORMULARIO = obtenerFechaCierreFormulario();
+    const FECHA_CIERRE_TEXTO = FECHA_CIERRE_FORMULARIO.toLocaleString("es-DO", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "America/Santo_Domingo"
+    });
+
+    function formularioEstaCerrado() {
+      return new Date() >= FECHA_CIERRE_FORMULARIO;
+    }
+
+    function formatearTiempoRestante(ms) {
+      if (ms <= 0) return "0 días · 00 h · 00 min · 00 s";
+
+      const totalSegundos = Math.floor(ms / 1000);
+      const dias = Math.floor(totalSegundos / 86400);
+      const horas = Math.floor((totalSegundos % 86400) / 3600);
+      const minutos = Math.floor((totalSegundos % 3600) / 60);
+      const segundos = totalSegundos % 60;
+
+      return `${dias} días · ${String(horas).padStart(2, "0")} h · ${String(minutos).padStart(2, "0")} min · ${String(segundos).padStart(2, "0")} s`;
+    }
+
+    function aplicarEstadoCierreFormulario() {
+      const aviso = document.getElementById("avisoCierreFormulario");
+      const form = document.getElementById("formularioEvaluacion");
+      const btnEnviar = document.getElementById("btnEnviar");
+      if (!aviso || !form) return;
+
+      const restante = FECHA_CIERRE_FORMULARIO - new Date();
+
+      if (restante <= 0) {
+        aviso.classList.add("cerrado");
+        aviso.innerHTML = `Registro cerrado.<small>Este formulario dejó de estar disponible el ${FECHA_CIERRE_TEXTO}.</small>`;
+
+        form.querySelectorAll("input, select, textarea").forEach(control => {
+          control.disabled = true;
+        });
+
+        form.querySelectorAll("button").forEach(boton => {
+          if (boton.id !== "btnImprimir") boton.disabled = true;
+        });
+
+        if (btnEnviar) btnEnviar.textContent = "Registro cerrado";
+        return;
+      }
+
+      aviso.classList.remove("cerrado");
+      aviso.innerHTML = `El registro estará disponible hasta el ${FECHA_CIERRE_TEXTO}.<small>Tiempo restante: ${formatearTiempoRestante(restante)}</small>`;
+    }
+
+    const sections = [{"title": "Primer Grado Niveles de Lectura", "grade": 1, "type": "lectura", "description": "Escriba la cantidad de estudiantes según el nivel de lectura alcanzado.", "groups": [{"label": "Niveles de lectura", "fields": ["G1-LT-N5 (FLUIDO)", "G1-LT-N4 (SIN FLUIDEZ)", "G1-LT-N3 (PALABRAS)", "G1-LT-N2 (SÍLABAS)", "G1-LT-N1 (IMÁGENES)"]}]}, {"title": "Segundo Grado Niveles de Lectura", "grade": 2, "type": "lectura", "description": "Escriba la cantidad de estudiantes según el nivel de lectura alcanzado.", "groups": [{"label": "Niveles de lectura", "fields": ["G2-LT-N5 (FLUIDO)", "G2-LT-N4 (SIN FLUIDEZ)", "G2-LT-N3 (PALABRAS)", "G2-LT-N2 (SÍLABAS)", "G2-LT-N1 (IMÁGENES)"]}]}, {"title": "Tercer Grado Niveles de Lectura", "grade": 3, "type": "lectura", "description": "Escriba la cantidad de estudiantes según el nivel de lectura alcanzado.", "groups": [{"label": "Niveles de lectura", "fields": ["G3-LT-N5 (FLUIDO)", "G3-LT-N4 (SIN FLUIDEZ)", "G3-LT-N3 (PALABRAS)", "G3-LT-N2 (SÍLABAS)", "G3-LT-N1 (IMÁGENES)"]}]}, {"title": "Primer Grado Lengua Española", "grade": 1, "type": "LE", "description": "Escriba la cantidad de estudiantes del centro educativo según el nivel alcanzado en cada indicador evaluado.", "groups": [{"label": "Indicador 1.1. Comprende de manera oral y escrita, textos funcionales y literarios muy sencillos, respondiendo preguntas literales e inferenciales.", "fields": ["G1-LE-IND1.1 (E)", "G1-LE-IND1.1 (A)", "G1-LE-IND1.1 (S)"]}, {"label": "Indicador 1.2. Produce textos funcionales y literarios ajustándose progresivamente al proceso de escritura, con apoyo de su docente.", "fields": ["G1-LE-IND1.2 (E)", "G1-LE-IND1.2 (A)", "G1-LE-IND1.2 (S)"]}]}, {"title": "Primer Grado Matemática", "grade": 1, "type": "MA", "description": "Escriba la cantidad de estudiantes del centro educativo según el nivel alcanzado en cada indicador evaluado.", "groups": [{"label": "Indicador 1.1. Utiliza imágenes y diagramas sencillos para representar situaciones cotidianas que implican conteo, comparación o clasificación.", "fields": ["G1-MA-IND1.1 (E)", "G1-MA-IND1.1 (A)", "G1-MA-IND1.1 (S)"]}, {"label": "Indicador 1.2. Reconoce imágenes de materiales y objetos físicos de su entorno que se relacionan con conceptos matemáticos básicos, como formas, tamaño o color.", "fields": ["G1-MA-IND1.2 (E)", "G1-MA-IND1.2 (A)", "G1-MA-IND1.2 (S)"]}, {"label": "Indicador 1.3. Relaciona adecuadamente imágenes de objetos con representaciones gráficas como dibujos o esquemas, para resolver problemas simples de su entorno cotidiano.", "fields": ["G1-MA-IND1.3 (E)", "G1-MA-IND1.3 (A)", "G1-MA-IND1.3 (S)"]}, {"label": "Indicador 2.1. Realiza problemas matemáticos simples relacionados a situaciones de su entorno.", "fields": ["G1-MA-IND2.1 (E)", "G1-MA-IND2.1 (A)", "G1-MA-IND2.1 (S)"]}, {"label": "Indicador 2.2. Expresa ideas matemáticas sencillas al explicar cómo resolvió un problema usando dibujos o representaciones gráficas.", "fields": ["G1-MA-IND2.2 (E)", "G1-MA-IND2.2 (A)", "G1-MA-IND2.2 (S)"]}, {"label": "Indicador 2.3. Reconoce patrones y sus regularidades en actividades cotidianas, como secuencias de colores, formas o numeración.", "fields": ["G1-MA-IND2.3 (E)", "G1-MA-IND2.3 (A)", "G1-MA-IND2.3 (S)"]}]}, {"title": "Segundo Grado Lengua Española", "grade": 2, "type": "LE", "description": "Escriba la cantidad de estudiantes del centro educativo según el nivel alcanzado en cada indicador evaluado.", "groups": [{"label": "Indicador 1.1. Comprende de manera oral y escrita el contenido de textos sencillos, respondiendo preguntas literales e inferenciales.", "fields": ["G2-LE-IND1.1 (E)", "G2-LE-IND1.1 (A)", "G2-LE-IND1.1 (S)"]}, {"label": "Indicador 2.1. Produce textos funcionales ajustándose progresivamente al proceso de escritura, con mayor autonomía.", "fields": ["G2-LE-IND2.1 (E)", "G2-LE-IND2.1 (A)", "G2-LE-IND2.1 (S)"]}]}, {"title": "Segundo Grado Matemática", "grade": 2, "type": "MA", "description": "Escriba la cantidad de estudiantes del centro educativo según el nivel alcanzado en cada indicador evaluado.", "groups": [{"label": "Indicador 1.1. Describe situaciones matemáticas cotidianas, utilizando un vocabulario básico como números, operaciones y comparaciones.", "fields": ["G2-MA-IND1.1 (E)", "G2-MA-IND1.1 (A)", "G2-MA-IND1.1 (S)"]}, {"label": "Indicador 1.2. Utiliza símbolos matemáticos como =, +, -, x, ÷, para representar ideas que den soluciones a situaciones cotidianas.", "fields": ["G2-MA-IND1.2 (E)", "G2-MA-IND1.2 (A)", "G2-MA-IND1.2 (S)"]}, {"label": "Indicador 1.3. Compara y relaciona situaciones cotidianas con conceptos de cantidad, medida o perímetro.", "fields": ["G2-MA-IND1.3 (E)", "G2-MA-IND1.3 (A)", "G2-MA-IND1.3 (S)"]}, {"label": "Indicador 1.4. Identifica figuras planas o cuerpos geométricos en situación de vida diaria.", "fields": ["G2-MA-IND1.4 (E)", "G2-MA-IND1.4 (A)", "G2-MA-IND1.4 (S)"]}, {"label": "Indicador 2.1. Plantea posibles soluciones a problemas matemáticos simples.", "fields": ["G2-MA-IND2.1 (E)", "G2-MA-IND2.1 (A)", "G2-MA-IND2.1 (S)"]}, {"label": "Indicador 2.2. Formula conjeturas sobre patrones o relaciones matemáticas de situaciones cotidianas.", "fields": ["G2-MA-IND2.2 (E)", "G2-MA-IND2.2 (A)", "G2-MA-IND2.2 (S)"]}, {"label": "Indicador 2.3. Interpreta datos a partir de dibujos o esquemas para dar respuesta a situaciones de la vida cotidiana.", "fields": ["G2-MA-IND2.3 (E)", "G2-MA-IND2.3 (A)", "G2-MA-IND2.3 (S)"]}]}, {"title": "Tercer Grado Lengua Española", "grade": 3, "type": "LE", "description": "Escriba la cantidad de estudiantes del centro educativo según el nivel alcanzado en cada indicador evaluado.", "groups": [{"label": "Indicador 1.1. Comprende de manera escrita respondiendo a preguntas literales del texto que lee.", "fields": ["G3-LE-IND1.1 (E)", "G3-LE-IND1.1 (A)", "G3-LE-IND1.1 (S)"]}, {"label": "Indicador 1.2. Comprende de manera escrita respondiendo a preguntas inferenciales del texto que lee.", "fields": ["G3-LE-IND1.2 (E)", "G3-LE-IND1.2 (A)", "G3-LE-IND1.2 (S)"]}, {"label": "Indicador 1.3. Produce de manera escrita respondiendo a una pregunta sobre el contenido del texto que lee.", "fields": ["G3-LE-IND1.3 (E)", "G3-LE-IND1.3 (A)", "G3-LE-IND1.3 (S)"]}, {"label": "Indicador 1.4. Produce textos funcionales respetando su función y estructura.", "fields": ["G3-LE-IND1.4 (E)", "G3-LE-IND1.4 (A)", "G3-LE-IND1.4 (S)"]}]}, {"title": "Tercer Grado Matemática", "grade": 3, "type": "MA", "description": "Escriba la cantidad de estudiantes del centro educativo según el nivel alcanzado en cada indicador evaluado.", "groups": [{"label": "Indicador 1.1. Escribe y describe patrones numéricos relacionados con secuencias de números pares e impares en contextos escolares.", "fields": ["G3-MA-IND1.1 (E)", "G3-MA-IND1.1 (A)", "G3-MA-IND1.1 (S)"]}, {"label": "Indicador 1.2. Interpreta enunciados matemáticos y selecciona la operación adecuada para resolver problemas contextualizados.", "fields": ["G3-MA-IND1.2 (E)", "G3-MA-IND1.2 (A)", "G3-MA-IND1.2 (S)"]}, {"label": "Indicador 1.3. Aplica números ordinales hasta el 30mo para describir posiciones o secuencias en situaciones del entorno escolar.", "fields": ["G3-MA-IND1.3 (E)", "G3-MA-IND1.3 (A)", "G3-MA-IND1.3 (S)"]}, {"label": "Indicador 2.1. Resuelve problemas que implican el cálculo de perímetro y área de figuras en contextos cotidianos, justificando el procedimiento utilizado.", "fields": ["G3-MA-IND2.1 (E)", "G3-MA-IND2.1 (A)", "G3-MA-IND2.1 (S)"]}, {"label": "Indicador 2.2. Resuelve problemas de medición: longitud, capacidad, tiempo y dinero en contextos escolares y familiares, utilizando estrategias digitales y convencionales.", "fields": ["G3-MA-IND2.2 (E)", "G3-MA-IND2.2 (A)", "G3-MA-IND2.2 (S)"]}, {"label": "Indicador 2.3. Interpreta y comunica de forma sencilla los resultados obtenidos a partir de gráficos estadísticos, relacionándolos con su contexto comunitario.", "fields": ["G3-MA-IND2.3 (E)", "G3-MA-IND2.3 (A)", "G3-MA-IND2.3 (S)"]}]}];
+
+    const container = document.getElementById("sectionsContainer");
+
+    function slug(text) {
+      return text
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_|_$/g, "")
+        .toLowerCase();
+    }
+
+    function getMatricula(grade) {
+      const value = Number(document.getElementById(`matricula_g${grade}`).value || 0);
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    function getVisibleLabel(field) {
+      // Mantiene la nomenclatura técnica en el atributo name,
+      // pero muestra al usuario el nombre completo del nivel.
+
+      // Niveles de desempeño por indicador
+      if (/\(E\)\s*$/.test(field)) return "Elemental";
+      if (/\(A\)\s*$/.test(field)) return "Aceptable";
+      if (/\(S\)\s*$/.test(field)) return "Satisfactorio";
+
+      // Niveles de lectura
+      if (/LT-N5/i.test(field)) return "Fluido";
+      if (/LT-N4/i.test(field)) return "No fluido";
+      if (/LT-N3/i.test(field)) return "Palabras";
+      if (/LT-N2/i.test(field)) return "Sílabas";
+      if (/LT-N1/i.test(field)) return "Imágenes";
+
+      return field;
+    }
+
+    function makeInput(field, grade, groupId) {
+      const id = slug(field);
+      const visibleLabel = getVisibleLabel(field);
+
+      return `
+        <div class="field">
+          <label for="${id}" class="required">${visibleLabel}</label>
+          <input type="number" id="${id}" name="${id}" min="0" step="1" required
+                 data-grade="${grade}" data-group="${groupId}" data-codigo="${field}" />
+        </div>`;
+    }
+
+    function renderSections() {
+      container.innerHTML = sections.map((section, sIndex) => {
+        const groups = section.groups.map((group, gIndex) => {
+          const groupId = `sec${sIndex}_grp${gIndex}`;
+          return `
+            <div class="indicator-group" data-group-box="${groupId}" data-grade="${section.grade}">
+              <div class="indicator-title">${group.label}</div>
+              <div class="grid-3">
+                ${group.fields.map(field => makeInput(field, section.grade, groupId)).join("")}
+              </div>
+              <div class="sum-line" id="sum_${groupId}">
+                <span>Suma registrada: <strong class="sum-value">0</strong></span>
+                <span>Matrícula del grado: <strong class="matricula-value">0</strong></span>
+              </div>
+              <div class="error-msg" id="error_${groupId}">
+                La suma de este bloque no puede ser mayor que la matrícula del grado.
+              </div>
+            </div>`;
+        }).join("");
+
+        return `
+          <section class="card">
+            <h2>${section.title}</h2>
+            <div class="section-description">${section.description}</div>
+            ${groups}
+          </section>`;
+      }).join("");
+    }
+
+    function validateGroup(groupId) {
+      const inputs = Array.from(document.querySelectorAll(`[data-group="${groupId}"]`));
+      if (!inputs.length) return true;
+
+      const grade = inputs[0].dataset.grade;
+      const matricula = getMatricula(grade);
+      const sum = inputs.reduce((acc, input) => acc + Number(input.value || 0), 0);
+
+      const line = document.getElementById(`sum_${groupId}`);
+      const err = document.getElementById(`error_${groupId}`);
+      line.querySelector(".sum-value").textContent = sum;
+      line.querySelector(".matricula-value").textContent = matricula;
+
+      line.classList.remove("error", "warning");
+      inputs.forEach(input => input.setCustomValidity(""));
+
+      if (sum > matricula) {
+        line.classList.add("error");
+        err.style.display = "block";
+        inputs.forEach(input => input.setCustomValidity("La suma de este bloque excede la matrícula del grado."));
+        return false;
+      }
+
+      if (matricula > 0 && sum < matricula) {
+        line.classList.add("warning");
+        err.style.display = "none";
+        return true;
+      }
+
+      err.style.display = "none";
+      return true;
+    }
+
+    function validateAllGroups() {
+      const groupIds = [...new Set(Array.from(document.querySelectorAll("[data-group]")).map(i => i.dataset.group))];
+      const ok = groupIds.every(validateGroup);
+      document.getElementById("globalError").style.display = ok ? "none" : "block";
+      return ok;
+    }
+
+
+    async function autocompletarCentroPorCodigo() {
+      const sigerdInput = document.getElementById("sigerd");
+      const codigo = sigerdInput.value.trim();
+      const status = document.getElementById("centroStatus");
+
+      if (codigo.length === 0) {
+        limpiarDatosCentro();
+        status.textContent = "";
+        status.className = "help";
+        return;
+      }
+
+      if (!/^\d{5}$/.test(codigo)) {
+        limpiarDatosCentro();
+        status.textContent = "Digite un código SIGERD válido de 5 dígitos.";
+        status.className = "help centro-error";
+        return;
+      }
+
+      status.textContent = "Buscando centro...";
+      status.className = "help";
+
+      try {
+        const response = await fetch(SCRIPT_URL + "?codigo=" + encodeURIComponent(codigo));
+        const result = await response.json();
+
+        if (result.status === "success" && result.data) {
+          document.getElementById("centro").value = result.data.centro || "";
+          document.getElementById("regional").value = result.data.regional || "";
+          document.getElementById("distrito").value = result.data.distrito || "";
+          document.getElementById("sector").value = result.data.sector || "";
+
+          status.textContent = "Centro encontrado y datos completados automáticamente.";
+          status.className = "help centro-ok";
+        } else {
+          limpiarDatosCentro();
+          status.textContent = "No se encontró un centro con ese código SIGERD.";
+          status.className = "help centro-error";
+        }
+      } catch (error) {
+        limpiarDatosCentro();
+        status.textContent = "No fue posible consultar la hoja Centros. Revise la implementación de Apps Script.";
+        status.className = "help centro-error";
+        console.error(error);
+      }
+    }
+
+    function limpiarDatosCentro() {
+      document.getElementById("centro").value = "";
+      document.getElementById("regional").value = "";
+      document.getElementById("distrito").value = "";
+      const sector = document.getElementById("sector");
+      if (sector) sector.value = "";
+    }
+    document.getElementById("sigerd").addEventListener("input", autocompletarCentroPorCodigo);
+
+    renderSections();
+
+    document.addEventListener("input", event => {
+      if (event.target.matches("input[type='number']")) {
+        const value = Number(event.target.value);
+        if (value < 0) event.target.value = 0;
+        if (event.target.dataset.group) {
+          validateGroup(event.target.dataset.group);
+        } else {
+          validateAllGroups();
+        }
+      }
+    });
+
+
+
+    let formularioPendiente = null;
+
+    function abrirModalResponsable(form) {
+      formularioPendiente = form;
+
+      document.getElementById("modal_responsable_nombre").value =
+        document.getElementById("responsable_nombre").value || "";
+
+      document.getElementById("modal_responsable_cedula").value =
+        document.getElementById("responsable_cedula").value || "";
+
+      document.getElementById("modal_responsable_telefono").value =
+        document.getElementById("responsable_telefono").value || "";
+
+      document.getElementById("modalResponsable").style.display = "flex";
+      document.getElementById("modal_responsable_nombre").focus();
+    }
+
+    function cerrarModalResponsable() {
+      document.getElementById("modalResponsable").style.display = "none";
+      formularioPendiente = null;
+    }
+
+    function confirmarDatosResponsable() {
+      const nombre = document.getElementById("modal_responsable_nombre").value.trim();
+      const cedula = document.getElementById("modal_responsable_cedula").value.trim();
+      const telefono = document.getElementById("modal_responsable_telefono").value.trim();
+
+      if (!nombre) {
+        alert("Debe escribir el nombre completo de la persona que realiza el envío.");
+        document.getElementById("modal_responsable_nombre").focus();
+        return;
+      }
+
+      if (!cedula) {
+        alert("Debe escribir la cédula de la persona que realiza el envío.");
+        document.getElementById("modal_responsable_cedula").focus();
+        return;
+      }
+
+      if (!telefono) {
+        alert("Debe escribir el teléfono de contacto.");
+        document.getElementById("modal_responsable_telefono").focus();
+        return;
+      }
+
+      document.getElementById("responsable_nombre").value = nombre;
+      document.getElementById("responsable_cedula").value = cedula;
+      document.getElementById("responsable_telefono").value = telefono;
+
+      if (formularioEstaCerrado()) {
+        document.getElementById("modalResponsable").style.display = "none";
+        formularioPendiente = null;
+        aplicarEstadoCierreFormulario();
+        alert("El registro de resultados cerró el " + FECHA_CIERRE_TEXTO + ".");
+        return;
+      }
+
+      document.getElementById("modalResponsable").style.display = "none";
+
+      if (formularioPendiente) {
+        enviarFormulario(formularioPendiente);
+      }
+    }
+
+    function enviarFormulario(form) {
+      document.getElementById("fecha_envio").value = new Date().toISOString();
+
+      const btn = document.getElementById("btnEnviar");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Enviando...";
+      }
+
+      form.submit();
+
+      setTimeout(() => {
+        alert("CENTRO REGISTRADO CORRECTAMENTE. Los datos digitados se conservarán en pantalla.");
+
+        // Se conservan los valores digitados para que el usuario pueda revisarlos,
+        // imprimirlos o usarlos como base para un nuevo registro.
+        validateAllGroups();
+
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Validar y enviar";
+        }
+
+        formularioPendiente = null;
+      }, 1200);
+    }
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && document.getElementById("modalResponsable").style.display === "flex") {
+        cerrarModalResponsable();
+      }
+    });
+
+    document.getElementById("formularioEvaluacion").addEventListener("submit", event => {
+      event.preventDefault();
+
+      if (formularioEstaCerrado()) {
+        aplicarEstadoCierreFormulario();
+        alert("El registro de resultados cerró el " + FECHA_CIERRE_TEXTO + ".");
+        return;
+      }
+
+      const form = event.currentTarget;
+      const validSums = validateAllGroups();
+
+      const codigoValido = /^\d{5}$/.test(document.getElementById("sigerd").value.trim());
+      const centroEncontrado = document.getElementById("centro").value.trim() !== "";
+
+      if (!codigoValido) {
+        alert("Debe digitar un código SIGERD válido de 5 dígitos.");
+        document.getElementById("sigerd").focus();
+        return;
+      }
+
+      if (!centroEncontrado) {
+        alert("El código SIGERD no está registrado en la hoja Centros o no se ha completado el autollenado.");
+        document.getElementById("sigerd").focus();
+        return;
+      }
+
+      if (!form.checkValidity() || !validSums) {
+        form.reportValidity();
+        return;
+      }
+
+      abrirModalResponsable(form);
+    });
+
+    document.getElementById("formularioEvaluacion").addEventListener("reset", () => {
+      setTimeout(validateAllGroups, 0);
+    });
+
+    aplicarEstadoCierreFormulario();
+    setInterval(aplicarEstadoCierreFormulario, 1000);
+    validateAllGroups();
+  </script>
+</body>
+</html>
