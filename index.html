@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -514,7 +514,7 @@ iframe{
     <div class="admin-card" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
         <div class="admin-head">
             <div>
-                <h2 id="adminTitle">Configuracion de fuentes de datos</h2>
+                <h2 id="adminTitle">Configuración de fuentes de datos</h2>
                 <p>Ingrese URLs publicadas de Google Sheets o enlaces directos para actualizar las entradas de la plataforma.</p>
             </div>
             <button class="admin-close" onclick="cerrarPanelAdmin()" aria-label="Cerrar">X</button>
@@ -543,67 +543,67 @@ iframe{
                     <small>Las URLs guardadas se aplican únicamente al año seleccionado aquí.</small>
                 </div>
                 <div class="admin-field">
-                    <label for="adminNewYear">Nuevo aÃ±o lectivo</label>
+                    <label for="adminNewYear">Nuevo año lectivo</label>
                     <input id="adminNewYear" type="text" placeholder="2027-2028">
                 </div>
                 <div class="admin-field">
                     <label>&nbsp;</label>
-                    <button class="admin-action" onclick="crearAnioAdmin()">AÃ±adir aÃ±o lectivo</button>
+                    <button class="admin-action" onclick="crearAnioAdmin()">Añadir año lectivo</button>
                     <small>Use el formato 2027-2028.</small>
                 </div>
                 <div class="admin-field full">
                     <label for="adminDashboardUrl">Dashboard interactivo SIREV</label>
-                    <input id="adminDashboardUrl" type="url" placeholder="dashboard_sirev_primaria_v41_admin.html">
+                    <input id="adminDashboardUrl" type="text" placeholder="dashboard_sirev_primaria_v41_admin.html">
                     <small>Puede ser un HTML local o una URL publicada. Si usa el dashboard local, se conservan sus datos empaquetados actuales.</small>
                 </div>
                 <div class="admin-field full">
                     <label for="adminPowerBiUrl">Informe Power BI</label>
-                    <input id="adminPowerBiUrl" type="url" placeholder="https://app.powerbi.com/view?...">
+                    <input id="adminPowerBiUrl" type="text" placeholder="https://app.powerbi.com/view?...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminPruebaSeptiembre">Pruebas y rubricas - Septiembre</label>
-                    <input id="adminPruebaSeptiembre" type="url" placeholder="https://drive.google.com/...">
+                    <label for="adminPruebaSeptiembre">Pruebas y rúbricas - Septiembre</label>
+                    <input id="adminPruebaSeptiembre" type="text" placeholder="https://drive.google.com/...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminPruebaNoviembre">Pruebas y rubricas - Noviembre</label>
-                    <input id="adminPruebaNoviembre" type="url" placeholder="https://drive.google.com/...">
+                    <label for="adminPruebaNoviembre">Pruebas y rúbricas - Noviembre</label>
+                    <input id="adminPruebaNoviembre" type="text" placeholder="https://drive.google.com/...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminPruebaMarzo">Pruebas y rubricas - Marzo</label>
-                    <input id="adminPruebaMarzo" type="url" placeholder="https://drive.google.com/...">
+                    <label for="adminPruebaMarzo">Pruebas y rúbricas - Marzo</label>
+                    <input id="adminPruebaMarzo" type="text" placeholder="https://drive.google.com/...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminPruebaMayo">Pruebas y rubricas - Mayo</label>
-                    <input id="adminPruebaMayo" type="url" placeholder="https://drive.google.com/...">
+                    <label for="adminPruebaMayo">Pruebas y rúbricas - Mayo</label>
+                    <input id="adminPruebaMayo" type="text" placeholder="https://drive.google.com/...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminSistSeptiembre">Sistematizacion - Septiembre</label>
-                    <input id="adminSistSeptiembre" type="url" placeholder="https://...">
+                    <label for="adminSistSeptiembre">Sistematización - Septiembre</label>
+                    <input id="adminSistSeptiembre" type="text" placeholder="https://...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminSistNoviembre">Sistematizacion - Noviembre</label>
-                    <input id="adminSistNoviembre" type="url" placeholder="https://...">
+                    <label for="adminSistNoviembre">Sistematización - Noviembre</label>
+                    <input id="adminSistNoviembre" type="text" placeholder="https://...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminSistMarzo">Sistematizacion - Marzo</label>
-                    <input id="adminSistMarzo" type="url" placeholder="https://...">
+                    <label for="adminSistMarzo">Sistematización - Marzo</label>
+                    <input id="adminSistMarzo" type="text" placeholder="https://...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminSistMayo">Sistematizacion / monitoreo - Mayo</label>
-                    <input id="adminSistMayo" type="url" placeholder="monitoreo_sistematizacion_admin.html">
+                    <label for="adminSistMayo">Sistematización / monitoreo - Mayo</label>
+                    <input id="adminSistMayo" type="text" placeholder="monitoreo_sistematizacion_admin.html">
                 </div>
                 <div class="admin-field">
                     <label for="adminPcUrl">Hoja primer ciclo</label>
-                    <input id="adminPcUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                    <input id="adminPcUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
                     <small>Se acepta URL publicada CSV o enlace de Google Sheets.</small>
                 </div>
                 <div class="admin-field">
                     <label for="adminScUrl">Hoja segundo ciclo</label>
-                    <input id="adminScUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
-                    <small>Estas dos hojas alimentan el monitoreo embebiendo parametros en la URL.</small>
+                    <input id="adminScUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                    <small>Estas dos hojas alimentan el monitoreo embebiendo parámetros en la URL.</small>
                 </div>
                 <div class="admin-field full">
-                    <label for="adminDeadline">Fecha limite del registro de resultados</label>
+                    <label for="adminDeadline">Fecha límite del registro de resultados</label>
                     <input id="adminDeadline" type="datetime-local">
                     <small>Esta fecha controla el contador del portal y el cierre de los formularios locales.</small>
                 </div>
@@ -898,12 +898,12 @@ function crearAnioAdmin() {
     const input = document.getElementById("adminNewYear");
     const nuevoAnio = input.value.trim();
     if (!/^\d{4}-\d{4}$/.test(nuevoAnio)) {
-        document.getElementById("adminStatus").textContent = "Escriba el aÃ±o lectivo con el formato 2027-2028.";
+        document.getElementById("adminStatus").textContent = "Escriba el año lectivo con el formato 2027-2028.";
         return;
     }
     const [inicio, fin] = nuevoAnio.split("-").map(Number);
     if (fin !== inicio + 1) {
-        document.getElementById("adminStatus").textContent = "El segundo aÃ±o debe ser consecutivo al primero.";
+        document.getElementById("adminStatus").textContent = "El segundo año debe ser consecutivo al primero.";
         return;
     }
     if (!datosPorAnio[nuevoAnio]) datosPorAnio[nuevoAnio] = crearDatosAnioVacio();
@@ -914,7 +914,7 @@ function crearAnioAdmin() {
     aplicarConfigAdmin();
     poblarMenuAnioPublico();
     llenarFormularioAdmin();
-    document.getElementById("adminStatus").textContent = "Anio lectivo " + nuevoAnio + " anadido. Complete sus enlaces y guarde.";
+    document.getElementById("adminStatus").textContent = "Año lectivo " + nuevoAnio + " añadido. Complete sus enlaces y guarde.";
 }
 
 function guardarConfigAdmin() {
@@ -941,7 +941,7 @@ function guardarConfigAdmin() {
     localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(adminConfig));
     aplicarConfigAdmin();
     poblarMenuAnioPublico();
-    document.getElementById("adminStatus").textContent = "Configuracion guardada para " + anioAdminSeleccionado + ".";
+    document.getElementById("adminStatus").textContent = "Configuración guardada para " + anioAdminSeleccionado + ".";
     actualizarConteoCierreFormularios();
     if (dashboardActual === "sirevInteractivo") abrirDashboard("sirevInteractivo");
 }
@@ -1208,3 +1208,4 @@ document.getElementById("adminNewYear").addEventListener("keydown", (e) => {
 </script>
 </body>
 </html>
+
