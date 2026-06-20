@@ -2158,32 +2158,35 @@ function fraseEstado(st){
   return 'Esto refleja un avance favorable en comparación con el resto.';
 }
 
-function textoResumen(amb, st){
+function textoResumen(amb, st, periodo){
   const cov = st.cov;
   const sujeto = amb.tipo==='nacional' ? 'A nivel nacional' :
     amb.tipo==='regional' ? `En la Regional ${amb.nombre}` :
     amb.tipo==='distrito' ? `En el Distrito ${amb.nombre}` :
     `En el centro educativo ${amb.nombre}`;
-  let txt = `${sujeto} se registraron ${fmt(cov.mat)} estudiantes matriculados, de los cuales ${fmt(cov.ev)} fueron evaluados, es decir, ${pctf(pct(cov.ev,cov.mat))} de cobertura, sumando todos los periodos disponibles.`;
+  const cuando = periodo ? `, en ${periodo} (el periodo más reciente con datos disponible)` : '';
+  let txt = `${sujeto}${cuando} se registraron ${fmt(cov.mat)} estudiantes matriculados, de los cuales ${fmt(cov.ev)} fueron evaluados, es decir, ${pctf(pct(cov.ev,cov.mat))} de cobertura. Los resultados de distintos periodos no se suman entre sí, porque corresponden a momentos de evaluación diferentes; la tabla siguiente muestra cada periodo por separado.`;
   if(amb.tipo!=='centro'){
-    txt += ` Esta cifra agrupa ${fmt(cov.regs)} regional(es), ${fmt(cov.dists)} distrito(s) y ${fmt(cov.cent)} centro(s) con registro de resultados.`;
+    txt += ` En ese periodo, la cifra agrupa ${fmt(cov.regs)} regional(es), ${fmt(cov.dists)} distrito(s) y ${fmt(cov.cent)} centro(s) con registro de resultados.`;
   }
   return txt;
 }
 
-function textoDesempeno(st){
+function textoDesempeno(st, periodo){
   const {pe,pa,ps,total} = st.perf;
   if(!total) return 'No hay suficientes datos de desempeño para este ámbito con los filtros seleccionados.';
-  let txt = `Considerando todos los periodos disponibles, ${pctf(ps)} de los estudiantes evaluados se ubicó en el nivel Satisfactorio, ${pctf(pa)} en Aceptable y ${pctf(pe)} en Elemental.`;
-  if(st.idxB!=null) txt += ` El índice de priorización calculado para este ámbito es de ${st.idxB.toFixed(2)} puntos. ${fraseEstado(st.st)}`;
+  const cuando = periodo ? `En ${periodo}, el periodo más reciente con datos,` : 'En el periodo disponible,';
+  let txt = `${cuando} ${pctf(ps)} de los estudiantes evaluados se ubicó en el nivel Satisfactorio, ${pctf(pa)} en Aceptable y ${pctf(pe)} en Elemental.`;
+  if(st.idxB!=null) txt += ` El índice de priorización calculado para ese periodo es de ${st.idxB.toFixed(2)} puntos. ${fraseEstado(st.st)}`;
   return txt;
 }
 
-function textoLectura(st, soloSegundoCiclo){
+function textoLectura(st, soloSegundoCiclo, periodo){
   if(soloSegundoCiclo) return 'El indicador de niveles de lectura no aplica para los grados de 4to a 6to.';
   const {fluidoPct,noFluidoPct,total} = st.read;
   if(!total) return 'No hay suficientes datos de lectura para este ámbito con los filtros seleccionados.';
-  return `En lectura, considerando todos los periodos disponibles, ${pctf(fluidoPct)} de los estudiantes evaluados se clasificó como lector fluido, mientras que ${pctf(noFluidoPct)} se mantiene en el nivel de lector no fluido.`;
+  const cuando = periodo ? `En ${periodo}, el periodo más reciente con datos,` : 'En el periodo disponible,';
+  return `En lectura, ${cuando.charAt(0).toLowerCase()+cuando.slice(1)} ${pctf(fluidoPct)} de los estudiantes evaluados se clasificó como lector fluido, mientras que ${pctf(noFluidoPct)} se mantiene en el nivel de lector no fluido.`;
 }
 
 function textoComparacion(stActual, niveles){
@@ -2237,14 +2240,13 @@ async function generarInformePDF(){
 
     const amb = ambitoActual(fExport, covX);
     const stActual = statsFromRows(perfX, readX, covX);
-    const niveles = statsNivelSuperior(fExport, amb);
     const comparPeriodos = comparacionTodosLosPeriodos(covX, perfX, readX);
-    const atencion = puntosAtencion(amb, perfX, covX);
-    const porArea = desempenoPorArea(fExport, perfX);
-    const porGrado = desempenoPorGrado(fExport, perfX);
-    const porGradoArea = desempenoPorGradoYArea(fExport, perfX);
-    const porLecturaGrado = lecturaPorGrado(fExport, readX);
     const soloSegundoCiclo = (fExport.ciclo===2) || (fExport.g && fExport.g>=4);
+    const periodosDisponibles = orderPeriod.filter(p=>covX.some(r=>idText(r[6])===p));
+    // Los periodos no se suman entre sí: para los párrafos de panorama general
+    // se usa el periodo más reciente disponible, no un total mezclado.
+    const stReciente = comparPeriodos ? comparPeriodos[comparPeriodos.length-1].stats : stActual;
+    const periodoReciente = comparPeriodos ? comparPeriodos[comparPeriodos.length-1].periodo : (periodosDisponibles[0] || '');
 
     const logoImg = await cargarLogoInstitucional();
 
@@ -2333,6 +2335,17 @@ async function generarInformePDF(){
         dibujarFila(lh, true, false);
       }
 
+      // Si la tabla completa cabe en una página vacía pero no en el espacio
+      // que queda en la página actual, se salta de página entera (encabezado
+      // + todas las filas) en vez de cortarla a la mitad.
+      const altoEncabezadoTabla = altoDeFila(lineasDeFila(head, true));
+      const altoFilasTotal = body.reduce((acc,fila)=>acc+altoDeFila(lineasDeFila(fila,false)), 0);
+      const altoTablaCompleta = altoEncabezadoTabla + altoFilasTotal;
+      const altoUtilPaginaVacia = (pageH - 50) - 88;
+      if(altoTablaCompleta <= altoUtilPaginaVacia && y + altoTablaCompleta > pageH - 50){
+        doc.addPage(); dibujarEncabezado();
+      }
+
       dibujarEncabezadoTabla();
       body.forEach((fila,idx)=>{
         const lf = lineasDeFila(fila, false);
@@ -2397,6 +2410,12 @@ async function generarInformePDF(){
       y += altoLeyenda + 8;
       doc.setTextColor(20,35,63);
     }
+    function subtituloPeriodo(periodo){
+      asegurarEspacio(22);
+      doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(0,59,113);
+      doc.text(periodo, marginX, y); y += 13;
+      doc.setTextColor(20,35,63);
+    }
 
     const nombreAmbito = amb.tipo==='nacional' ? 'Nivel nacional' :
       amb.tipo==='regional' ? `Regional ${amb.nombre}` :
@@ -2412,59 +2431,19 @@ async function generarInformePDF(){
     doc.setTextColor(20,35,63);
 
     titulo('Resumen del ámbito');
-    parrafo(textoResumen(amb, stActual));
+    parrafo(textoResumen(amb, stReciente, periodoReciente));
+    if(periodosDisponibles.length){
+      tabla(['Periodo','Matrícula','Evaluados','% Cobertura'],
+        periodosDisponibles.map(p=>{
+          const a = covAgg(covX.filter(r=>idText(r[6])===p));
+          return [p, fmt(a.mat), fmt(a.ev), pctf(pct(a.ev,a.mat))];
+        }), [1,1,1,1]);
+    }
 
     titulo('Desempeño');
-    parrafo(textoDesempeno(stActual));
-    if(stActual.perf.total){
-      tabla(['Nivel','% de estudiantes'], [
-        ['Satisfactorio', pctf(stActual.perf.ps)],
-        ['Aceptable', pctf(stActual.perf.pa)],
-        ['Elemental', pctf(stActual.perf.pe)]
-      ], [2,1]);
-      graficaBarras(['Total del ámbito'], [
-        {nombre:'Satisfactorio', valores:[stActual.perf.ps]},
-        {nombre:'Aceptable', valores:[stActual.perf.pa]},
-        {nombre:'Elemental', valores:[stActual.perf.pe]}
-      ], COLOR_DESEMPENO_PDF);
-    }
-
-    titulo('Lectura');
-    parrafo(textoLectura(stActual, soloSegundoCiclo));
-    if(!soloSegundoCiclo && stActual.read.total){
-      graficaBarras(['Total del ámbito'], [
-        {nombre:'Lector fluido', valores:[stActual.read.fluidoPct]},
-        {nombre:'Lector no fluido', valores:[stActual.read.noFluidoPct]}
-      ], COLOR_LECTURA2_PDF);
-    }
-
-    if(porLecturaGrado && porLecturaGrado.length){
-      titulo('Niveles de lectura por grado (primer ciclo)', 11);
-      parrafo('Este desglose aplica solo a primero, segundo y tercer grado, ya que la prueba de lectura no se administra en el segundo ciclo.', 9.5);
-      tabla(['Grado', ...readOrder], porLecturaGrado.map(g=>[g.grado, ...g.niveles.map(p=>pctf(p))]), [0.8,1,1,1,1,1]);
-      graficaBarras(porLecturaGrado.map(g=>g.grado),
-        readOrder.map((lv,li)=>({nombre:lv, valores:porLecturaGrado.map(g=>g.niveles[li])})),
-        COLOR_LECTURA5_PDF);
-    }
-
-    if(niveles.length){
-      titulo('Comparación con el nivel superior');
-      parrafo(textoComparacion(stActual, niveles));
-      const etiquetasNiv = [nombreAmbito, ...niveles.map(n=>n.label.replace(/^(el|la) /,''))];
-      tabla(['Ámbito','% Satisfactorio','% Aceptable','% Elemental'], [
-        [nombreAmbito, pctf(stActual.perf.ps), pctf(stActual.perf.pa), pctf(stActual.perf.pe)],
-        ...niveles.map(n=>[n.label.replace(/^(el|la) /,''), pctf(n.stats.perf.ps), pctf(n.stats.perf.pa), pctf(n.stats.perf.pe)])
-      ], [2,1,1,1]);
-      graficaBarras(etiquetasNiv, [
-        {nombre:'Satisfactorio', valores:[stActual.perf.ps, ...niveles.map(n=>n.stats.perf.ps)]},
-        {nombre:'Aceptable', valores:[stActual.perf.pa, ...niveles.map(n=>n.stats.perf.pa)]},
-        {nombre:'Elemental', valores:[stActual.perf.pe, ...niveles.map(n=>n.stats.perf.pe)]}
-      ], COLOR_DESEMPENO_PDF);
-    }
-
-    titulo('Comparación entre periodos');
-    parrafo(textoComparacionPeriodos(comparPeriodos));
+    parrafo(textoDesempeno(stReciente, periodoReciente));
     if(comparPeriodos){
+      parrafo('A continuación, el mismo desempeño separado por periodo, para comparar cómo avanzó cada uno.', 9.5);
       tabla(['Periodo','% Satisfactorio','% Aceptable','% Elemental'],
         comparPeriodos.map(c=>[c.periodo, pctf(c.stats.perf.ps), pctf(c.stats.perf.pa), pctf(c.stats.perf.pe)]), [1.3,1,1,1]);
       graficaBarras(comparPeriodos.map(c=>c.periodo), [
@@ -2472,58 +2451,132 @@ async function generarInformePDF(){
         {nombre:'Aceptable', valores:comparPeriodos.map(c=>c.stats.perf.pa)},
         {nombre:'Elemental', valores:comparPeriodos.map(c=>c.stats.perf.pe)}
       ], COLOR_DESEMPENO_PDF);
-      if(!soloSegundoCiclo){
+      parrafo(textoComparacionPeriodos(comparPeriodos));
+    } else {
+      parrafo('Solo hay un periodo con datos disponibles para este ámbito, por lo que no es posible separar por periodo.', 9.5);
+    }
+
+    titulo('Lectura');
+    parrafo(textoLectura(stReciente, soloSegundoCiclo, periodoReciente));
+    if(!soloSegundoCiclo){
+      if(comparPeriodos){
+        parrafo('A continuación, los mismos niveles de lectura separados por periodo.', 9.5);
         tabla(['Periodo','% Lector fluido','% Lector no fluido'],
           comparPeriodos.map(c=>[c.periodo, pctf(c.stats.read.fluidoPct), pctf(c.stats.read.noFluidoPct)]), [1.3,1,1]);
         graficaBarras(comparPeriodos.map(c=>c.periodo), [
           {nombre:'Lector fluido', valores:comparPeriodos.map(c=>c.stats.read.fluidoPct)},
           {nombre:'Lector no fluido', valores:comparPeriodos.map(c=>c.stats.read.noFluidoPct)}
         ], COLOR_LECTURA2_PDF);
+      } else {
+        parrafo('Solo hay un periodo con datos disponibles para este ámbito.', 9.5);
       }
     }
 
-    if(porGrado && porGrado.length){
-      titulo('Desempeño por grado');
-      parrafo('Este es el desempeño dentro del ámbito seleccionado, desagregado por grado, de primero a sexto, sumando todos los periodos disponibles.');
-      tabla(['Grado','% Satisfactorio','% Aceptable','% Elemental'],
-        porGrado.map(g=>[g.grado, pctf(g.ps), pctf(g.pa), pctf(g.pe)]), [1.3,1,1,1]);
-      graficaBarras(porGrado.map(g=>g.grado), [
-        {nombre:'Satisfactorio', valores:porGrado.map(g=>g.ps)},
-        {nombre:'Aceptable', valores:porGrado.map(g=>g.pa)},
-        {nombre:'Elemental', valores:porGrado.map(g=>g.pe)}
-      ], COLOR_DESEMPENO_PDF);
-    }
-
-    if(porArea && porArea.length){
-      titulo('Desempeño por área');
-      parrafo('Este es el desempeño dentro del ámbito seleccionado, desagregado por área o asignatura, ordenado de mayor a menor prioridad de atención, sumando todos los periodos disponibles.');
-      tabla(['Área','% Satisfactorio','% Aceptable','% Elemental'],
-        porArea.map(a=>[a.area, pctf(a.ps), pctf(a.pa), pctf(a.pe)]), [1.8,1,1,1]);
-      graficaBarras(porArea.map(a=>a.area), [
-        {nombre:'Satisfactorio', valores:porArea.map(a=>a.ps)},
-        {nombre:'Aceptable', valores:porArea.map(a=>a.pa)},
-        {nombre:'Elemental', valores:porArea.map(a=>a.pe)}
-      ], COLOR_DESEMPENO_PDF);
-    }
-
-    if(porGradoArea && porGradoArea.length){
-      titulo('Desempeño por grado y área');
-      parrafo('A continuación, el desempeño de cada área dentro de cada grado, para distinguir si las dificultades se concentran en una asignatura específica o se repiten en todas.');
-      porGradoArea.forEach(g=>{
-        asegurarEspacio(26);
-        doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(0,59,113);
-        doc.text(g.grado, marginX, y); y += 14;
-        doc.setTextColor(20,35,63);
-        tabla(['Área','% Satisfactorio','% Aceptable','% Elemental'],
-          g.areas.map(a=>[a.area, pctf(a.ps), pctf(a.pa), pctf(a.pe)]), [1.8,1,1,1]);
+    const lecturaPorGradoPorPeriodo = periodosDisponibles
+      .map(p=>({periodo:p, datos: lecturaPorGrado(fExport, readX.filter(r=>idText(r[6])===p))}))
+      .filter(x=>x.datos && x.datos.length);
+    if(lecturaPorGradoPorPeriodo.length){
+      titulo('Niveles de lectura por grado (primer ciclo)', 11);
+      parrafo('Aplica solo a primero, segundo y tercer grado, ya que la prueba de lectura no se administra en el segundo ciclo. Se muestra un periodo a la vez para comparar.', 9.5);
+      lecturaPorGradoPorPeriodo.forEach(({periodo, datos})=>{
+        subtituloPeriodo(periodo);
+        tabla(['Grado', ...readOrder], datos.map(g=>[g.grado, ...g.niveles.map(p=>pctf(p))]), [0.8,1,1,1,1,1]);
+        graficaBarras(datos.map(g=>g.grado),
+          readOrder.map((lv,li)=>({nombre:lv, valores:datos.map(g=>g.niveles[li])})),
+          COLOR_LECTURA5_PDF);
       });
     }
 
-    if(atencion && atencion.rows.length){
-      titulo(`Puntos de atención por ${atencion.label.toLowerCase()}`);
-      parrafo(`Dentro de este ámbito, estos son los ${atencion.label.toLowerCase()}s con mayor índice de priorización, es decir, los que requieren atención más urgente según los datos disponibles, sumando todos los periodos.`);
-      tabla(['#',atencion.label,'Evaluados','Índice','% Satisfactorio','Estado'],
-        atencion.rows.map((r,i)=>[i+1, r.k, fmt(r.ev), r.idxB.toFixed(2), pctf(r.ps), r.estado]), [0.4,2.3,0.9,0.8,1.1,1.4]);
+    const comparacionPorPeriodo = periodosDisponibles.map(p=>{
+      const fP = {...fExport, periods:[p]};
+      return {periodo:p, st: scopeStats(fP), niveles: statsNivelSuperior(fP, amb)};
+    }).filter(x=>x.niveles.length && x.st.perf.total);
+    if(comparacionPorPeriodo.length){
+      titulo('Comparación con el nivel superior');
+      parrafo('Se muestra un periodo a la vez, para que la comparación territorial no mezcle datos de fechas distintas.', 9.5);
+      comparacionPorPeriodo.forEach(({periodo, st, niveles})=>{
+        subtituloPeriodo(periodo);
+        parrafo(textoComparacion(st, niveles), 9);
+        const etiquetasNiv = [nombreAmbito, ...niveles.map(n=>n.label.replace(/^(el|la) /,''))];
+        tabla(['Ámbito','% Satisfactorio','% Aceptable','% Elemental'], [
+          [nombreAmbito, pctf(st.perf.ps), pctf(st.perf.pa), pctf(st.perf.pe)],
+          ...niveles.map(n=>[n.label.replace(/^(el|la) /,''), pctf(n.stats.perf.ps), pctf(n.stats.perf.pa), pctf(n.stats.perf.pe)])
+        ], [2,1,1,1]);
+        graficaBarras(etiquetasNiv, [
+          {nombre:'Satisfactorio', valores:[st.perf.ps, ...niveles.map(n=>n.stats.perf.ps)]},
+          {nombre:'Aceptable', valores:[st.perf.pa, ...niveles.map(n=>n.stats.perf.pa)]},
+          {nombre:'Elemental', valores:[st.perf.pe, ...niveles.map(n=>n.stats.perf.pe)]}
+        ], COLOR_DESEMPENO_PDF);
+      });
+    }
+
+    const porGradoPorPeriodo = periodosDisponibles
+      .map(p=>({periodo:p, datos: desempenoPorGrado(fExport, perfX.filter(r=>idText(r[6])===p))}))
+      .filter(x=>x.datos && x.datos.length);
+    if(porGradoPorPeriodo.length){
+      titulo('Desempeño por grado');
+      parrafo('Desagregado por grado, de primero a sexto, un periodo a la vez para apreciar la evolución de cada grado.', 9.5);
+      porGradoPorPeriodo.forEach(({periodo, datos})=>{
+        subtituloPeriodo(periodo);
+        tabla(['Grado','% Satisfactorio','% Aceptable','% Elemental'],
+          datos.map(g=>[g.grado, pctf(g.ps), pctf(g.pa), pctf(g.pe)]), [1.3,1,1,1]);
+        graficaBarras(datos.map(g=>g.grado), [
+          {nombre:'Satisfactorio', valores:datos.map(g=>g.ps)},
+          {nombre:'Aceptable', valores:datos.map(g=>g.pa)},
+          {nombre:'Elemental', valores:datos.map(g=>g.pe)}
+        ], COLOR_DESEMPENO_PDF);
+      });
+    }
+
+    const porAreaPorPeriodo = periodosDisponibles
+      .map(p=>({periodo:p, datos: desempenoPorArea(fExport, perfX.filter(r=>idText(r[6])===p))}))
+      .filter(x=>x.datos && x.datos.length);
+    if(porAreaPorPeriodo.length){
+      titulo('Desempeño por área');
+      parrafo('Desagregado por área o asignatura, ordenado de mayor a menor prioridad de atención, un periodo a la vez.', 9.5);
+      porAreaPorPeriodo.forEach(({periodo, datos})=>{
+        subtituloPeriodo(periodo);
+        tabla(['Área','% Satisfactorio','% Aceptable','% Elemental'],
+          datos.map(a=>[a.area, pctf(a.ps), pctf(a.pa), pctf(a.pe)]), [1.8,1,1,1]);
+        graficaBarras(datos.map(a=>a.area), [
+          {nombre:'Satisfactorio', valores:datos.map(a=>a.ps)},
+          {nombre:'Aceptable', valores:datos.map(a=>a.pa)},
+          {nombre:'Elemental', valores:datos.map(a=>a.pe)}
+        ], COLOR_DESEMPENO_PDF);
+      });
+    }
+
+    const porGradoAreaPorPeriodo = periodosDisponibles
+      .map(p=>({periodo:p, datos: desempenoPorGradoYArea(fExport, perfX.filter(r=>idText(r[6])===p))}))
+      .filter(x=>x.datos && x.datos.length);
+    if(porGradoAreaPorPeriodo.length){
+      titulo('Desempeño por grado y área');
+      parrafo('Los resultados de periodos distintos no se suman entre sí, porque corresponden a momentos de evaluación diferentes. Por eso se muestra un periodo a la vez, con el desempeño de cada área dentro de cada grado, para distinguir si las dificultades se concentran en una asignatura específica o se repiten en todas.', 9.5);
+      porGradoAreaPorPeriodo.forEach(({periodo, datos})=>{
+        subtituloPeriodo(periodo);
+        const filas = [];
+        datos.forEach(g=>{
+          g.areas.forEach((a,i)=>{
+            filas.push([i===0 ? g.grado : '', a.area, pctf(a.ps), pctf(a.pa), pctf(a.pe)]);
+          });
+        });
+        tabla(['Grado','Área','% Satisfactorio','% Aceptable','% Elemental'], filas, [1,1.7,1,1,1]);
+      });
+    }
+
+    const atencionPorPeriodo = periodosDisponibles.map(p=>({
+      periodo: p,
+      datos: puntosAtencion(amb, perfX.filter(r=>idText(r[6])===p), covX.filter(r=>idText(r[6])===p))
+    })).filter(x=>x.datos && x.datos.rows.length);
+    if(atencionPorPeriodo.length){
+      const labelAtencion = atencionPorPeriodo[0].datos.label;
+      titulo(`Puntos de atención por ${labelAtencion.toLowerCase()}`);
+      parrafo(`Estos son los ${labelAtencion.toLowerCase()}s con mayor índice de priorización en cada periodo, es decir, los que requirieron atención más urgente según los datos de ese momento. El orden puede cambiar de un periodo a otro.`, 9.5);
+      atencionPorPeriodo.forEach(({periodo, datos})=>{
+        subtituloPeriodo(periodo);
+        tabla(['#',datos.label,'Evaluados','Índice','% Satisfactorio','Estado'],
+          datos.rows.map((r,i)=>[i+1, r.k, fmt(r.ev), r.idxB.toFixed(2), pctf(r.ps), r.estado]), [0.4,2.3,0.9,0.8,1.1,1.4]);
+      });
     }
 
     titulo('Nota metodológica', 11);
