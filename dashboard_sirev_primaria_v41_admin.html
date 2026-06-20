@@ -2356,9 +2356,90 @@ async function generarInformePDF(){
       });
       y += 14;
     }
-    function graficaBarras(categorias, series, colores){
+    function tablaPeriodosAgrupados(headFijo, periodos, subniveles, filas, pesos){
       const anchoTotal = pageW - marginX*2;
-      const altoBarras = 120;
+      const nCols = headFijo.length + periodos.length*subniveles.length;
+      const p = pesos || Array(nCols).fill(1);
+      const sumaP = p.reduce((a,b)=>a+b,0);
+      const anchos = p.map(v=>anchoTotal*v/sumaP);
+      const fontSize = 7.6, padX = 4, padY = 4, lineH = fontSize*1.16;
+
+      function colX(i){ let x=marginX; for(let k=0;k<i;k++) x+=anchos[k]; return x; }
+      function lineasDeCelda(texto, ancho){
+        doc.setFontSize(fontSize);
+        return doc.splitTextToSize(String(texto==null?'':texto), Math.max(ancho-padX*2,14));
+      }
+      function altoDeFilaDatos(fila){
+        let max=1;
+        fila.forEach((texto,i)=>{ doc.setFont('helvetica','normal'); const l=lineasDeCelda(texto,anchos[i]); if(l.length>max)max=l.length; });
+        return max*lineH+padY*2;
+      }
+
+      const altoH1 = lineH+padY*2.1, altoH2 = lineH+padY*2.1;
+
+      function dibujarEncabezados(){
+        asegurarEspacio(altoH1+altoH2+6);
+        const yStart = y;
+        doc.setFillColor(0,59,113);
+        doc.rect(marginX, yStart, anchoTotal, altoH1+altoH2, 'F');
+        doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(fontSize);
+        headFijo.forEach((h,i)=>{
+          doc.text(String(h), colX(i)+padX, yStart+(altoH1+altoH2)/2+fontSize*0.3);
+        });
+        periodos.forEach((per,pi)=>{
+          const base = headFijo.length+pi*subniveles.length;
+          const anchoGrupo = subniveles.reduce((a,_,si)=>a+anchos[base+si],0);
+          doc.text(String(per), colX(base)+anchoGrupo/2, yStart+padY+lineH*0.85, {align:'center'});
+        });
+        doc.setFont('helvetica','bold'); doc.setFontSize(fontSize-0.6);
+        periodos.forEach((per,pi)=>{
+          subniveles.forEach((s,si)=>{
+            const idx = headFijo.length+pi*subniveles.length+si;
+            doc.text(String(s), colX(idx)+anchos[idx]/2, yStart+altoH1+padY+lineH*0.85, {align:'center'});
+          });
+        });
+        doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
+        for(let i=1;i<nCols;i++){ doc.line(colX(i), yStart, colX(i), yStart+altoH1+altoH2); }
+        doc.line(colX(headFijo.length), yStart+altoH1, marginX+anchoTotal, yStart+altoH1);
+        doc.setDrawColor(0,59,113); doc.setLineWidth(0.8);
+        doc.rect(marginX, yStart, anchoTotal, altoH1+altoH2);
+        y = yStart+altoH1+altoH2;
+        doc.setTextColor(20,35,63);
+      }
+
+      function dibujarFilaDatos(fila, idx){
+        const alto = altoDeFilaDatos(fila);
+        if(idx%2===1){ doc.setFillColor(244,248,252); doc.rect(marginX, y, anchoTotal, alto, 'F'); }
+        doc.setFont('helvetica','normal'); doc.setFontSize(fontSize); doc.setTextColor(20,35,63);
+        fila.forEach((texto,i)=>{
+          const lineas = lineasDeCelda(texto, anchos[i]);
+          lineas.forEach((linea,li)=>doc.text(linea, colX(i)+padX, y+padY+lineH*(li+0.8)));
+        });
+        doc.setDrawColor(216,228,241); doc.setLineWidth(0.4);
+        for(let i=1;i<nCols;i++){ doc.line(colX(i), y, colX(i), y+alto); }
+        doc.rect(marginX, y, anchoTotal, alto);
+        y += alto;
+      }
+
+      const altosFilas = filas.map(f=>altoDeFilaDatos(f));
+      const altoTablaCompleta = altoH1+altoH2+altosFilas.reduce((a,b)=>a+b,0);
+      const altoUtilPaginaVacia = (pageH-50)-88;
+      if(altoTablaCompleta<=altoUtilPaginaVacia && y+altoTablaCompleta > pageH-50){
+        doc.addPage(); dibujarEncabezado();
+      }
+
+      dibujarEncabezados();
+      filas.forEach((fila,idx)=>{
+        const alto = altoDeFilaDatos(fila);
+        if(y+alto > pageH-50){ doc.addPage(); dibujarEncabezado(); dibujarEncabezados(); }
+        dibujarFilaDatos(fila, idx);
+      });
+      y += 14;
+    }
+
+    function graficaBarras(categorias, series, colores, altoPersonalizado){
+      const anchoTotal = pageW - marginX*2;
+      const altoBarras = altoPersonalizado || 120;
       const fuenteEtiqueta = 7.3;
       doc.setFont('helvetica','normal'); doc.setFontSize(fuenteEtiqueta);
       const nCat = Math.max(1,categorias.length);
@@ -2411,9 +2492,9 @@ async function generarInformePDF(){
       y += altoLeyenda + 8;
       doc.setTextColor(20,35,63);
     }
-    function graficaLineas(categoriasX, series, colores){
+    function graficaLineas(categoriasX, series, colores, altoPersonalizado){
       const anchoTotal = pageW - marginX*2;
-      const altoGrafico = 130;
+      const altoGrafico = altoPersonalizado || 130;
       const altoEtiquetas = 16;
       const altoLeyenda = 22;
       asegurarEspacio(altoGrafico + altoEtiquetas + altoLeyenda + 14);
@@ -2500,14 +2581,17 @@ async function generarInformePDF(){
     titulo('Desempeño');
     parrafo(textoDesempeno(stReciente, periodoReciente));
     if(comparPeriodos){
-      parrafo('A continuación, el mismo desempeño separado por periodo, en una sola tabla y una sola gráfica, para comparar cómo avanzó cada uno.', 9.5);
+      parrafo('A continuación, el mismo desempeño separado por periodo, en una sola tabla. La gráfica de barras muestra los tres niveles; la de línea se enfoca solo en Satisfactorio, el aspecto elegido para ver la tendencia.', 9.5);
       tabla(['Periodo','% Satisfactorio','% Aceptable','% Elemental'],
         comparPeriodos.map(c=>[c.periodo, pctf(c.stats.perf.ps), pctf(c.stats.perf.pa), pctf(c.stats.perf.pe)]), [1.3,1,1,1]);
-      graficaLineas(comparPeriodos.map(c=>c.periodo), [
+      graficaBarras(comparPeriodos.map(c=>c.periodo), [
         {nombre:'Satisfactorio', valores:comparPeriodos.map(c=>c.stats.perf.ps)},
         {nombre:'Aceptable', valores:comparPeriodos.map(c=>c.stats.perf.pa)},
         {nombre:'Elemental', valores:comparPeriodos.map(c=>c.stats.perf.pe)}
       ], COLOR_DESEMPENO_PDF);
+      graficaLineas(comparPeriodos.map(c=>c.periodo), [
+        {nombre:'Satisfactorio', valores:comparPeriodos.map(c=>c.stats.perf.ps)}
+      ], [hexARgb(C.S)]);
       parrafo(textoComparacionPeriodos(comparPeriodos));
     } else {
       parrafo('Solo hay un periodo con datos disponibles para este ámbito, por lo que no es posible separar por periodo.', 9.5);
@@ -2517,13 +2601,16 @@ async function generarInformePDF(){
     parrafo(textoLectura(stReciente, soloSegundoCiclo, periodoReciente));
     if(!soloSegundoCiclo){
       if(comparPeriodos){
-        parrafo('A continuación, los mismos niveles de lectura separados por periodo, en una sola tabla y una sola gráfica.', 9.5);
+        parrafo('A continuación, los mismos niveles de lectura separados por periodo, en una sola tabla. La gráfica de línea se enfoca solo en Lector fluido, el aspecto elegido para ver la tendencia.', 9.5);
         tabla(['Periodo','% Lector fluido','% Lector no fluido'],
           comparPeriodos.map(c=>[c.periodo, pctf(c.stats.read.fluidoPct), pctf(c.stats.read.noFluidoPct)]), [1.3,1,1]);
-        graficaLineas(comparPeriodos.map(c=>c.periodo), [
+        graficaBarras(comparPeriodos.map(c=>c.periodo), [
           {nombre:'Lector fluido', valores:comparPeriodos.map(c=>c.stats.read.fluidoPct)},
           {nombre:'Lector no fluido', valores:comparPeriodos.map(c=>c.stats.read.noFluidoPct)}
         ], COLOR_LECTURA2_PDF);
+        graficaLineas(comparPeriodos.map(c=>c.periodo), [
+          {nombre:'Lector fluido', valores:comparPeriodos.map(c=>c.stats.read.fluidoPct)}
+        ], [hexARgb(C.N5)]);
       } else {
         parrafo('Solo hay un periodo con datos disponibles para este ámbito.', 9.5);
       }
@@ -2546,11 +2633,16 @@ async function generarInformePDF(){
         g.porPeriodo.forEach((pp,i)=>filasLec.push([i===0?g.grado:'', pp.periodo, ...pp.niveles.map(pctf)]));
       });
       tabla(['Grado','Periodo', ...readOrder], filasLec, [0.8,0.9,1,1,1,1,1]);
-      parrafo('La gráfica siguiente muestra, para cada grado, la tendencia del % de lectores fluidos a lo largo de los periodos.', 9);
-      graficaLineas(periodosDisponibles, lecturaPorGradoPeriodos.map(g=>({
-        nombre: g.grado,
-        valores: periodosDisponibles.map(p=>{ const it=g.porPeriodo.find(pp=>pp.periodo===p); return it ? it.niveles[4] : 0; })
-      })), PALETA_CATEGORICA_PDF);
+      parrafo('A continuación, un gráfico de barras (con los cinco niveles) y uno de línea (solo lector fluido, el aspecto elegido para la tendencia) para cada grado.', 9);
+      lecturaPorGradoPeriodos.forEach(g=>{
+        subtituloPeriodo(g.grado);
+        graficaBarras(g.porPeriodo.map(pp=>pp.periodo),
+          readOrder.map((lv,li)=>({nombre:lv, valores:g.porPeriodo.map(pp=>pp.niveles[li])})),
+          COLOR_LECTURA5_PDF, 95);
+        graficaLineas(g.porPeriodo.map(pp=>pp.periodo), [
+          {nombre:'Lector fluido', valores:g.porPeriodo.map(pp=>pp.niveles[4])}
+        ], [hexARgb(C.N5)], 95);
+      });
     }
 
     const comparacionPeriodos = periodosDisponibles.map(p=>{
@@ -2596,11 +2688,18 @@ async function generarInformePDF(){
         g.porPeriodo.forEach((pp,i)=>filasGrado.push([i===0?g.grado:'', pp.periodo, pctf(pp.ps), pctf(pp.pa), pctf(pp.pe)]));
       });
       tabla(['Grado','Periodo','% Satisfactorio','% Aceptable','% Elemental'], filasGrado, [1,1.1,1,1,1]);
-      parrafo('La gráfica siguiente muestra la tendencia del % Satisfactorio de cada grado a lo largo de los periodos.', 9);
-      graficaLineas(periodosDisponibles, gradoPeriodos.map(g=>({
-        nombre: g.grado,
-        valores: periodosDisponibles.map(p=>{ const it=g.porPeriodo.find(pp=>pp.periodo===p); return it ? it.ps : 0; })
-      })), PALETA_CATEGORICA_PDF);
+      parrafo('A continuación, un gráfico de barras (con los tres niveles) y uno de línea (solo Satisfactorio, el aspecto elegido para la tendencia) para cada grado.', 9);
+      gradoPeriodos.forEach(g=>{
+        subtituloPeriodo(g.grado);
+        graficaBarras(g.porPeriodo.map(pp=>pp.periodo), [
+          {nombre:'Satisfactorio', valores:g.porPeriodo.map(pp=>pp.ps)},
+          {nombre:'Aceptable', valores:g.porPeriodo.map(pp=>pp.pa)},
+          {nombre:'Elemental', valores:g.porPeriodo.map(pp=>pp.pe)}
+        ], COLOR_DESEMPENO_PDF, 95);
+        graficaLineas(g.porPeriodo.map(pp=>pp.periodo), [
+          {nombre:'Satisfactorio', valores:g.porPeriodo.map(pp=>pp.ps)}
+        ], [hexARgb(C.S)], 95);
+      });
     }
 
     const areaPeriodos = orderArea.map(a=>{
@@ -2621,39 +2720,49 @@ async function generarInformePDF(){
         a.porPeriodo.forEach((pp,i)=>filasArea.push([i===0?a.area:'', pp.periodo, pctf(pp.ps), pctf(pp.pa), pctf(pp.pe)]));
       });
       tabla(['Área','Periodo','% Satisfactorio','% Aceptable','% Elemental'], filasArea, [1.6,1.1,1,1,1]);
-      parrafo('La gráfica siguiente muestra la tendencia del % Satisfactorio de cada área a lo largo de los periodos.', 9);
-      graficaLineas(periodosDisponibles, areaPeriodos.map(a=>({
-        nombre: a.area,
-        valores: periodosDisponibles.map(p=>{ const it=a.porPeriodo.find(pp=>pp.periodo===p); return it ? it.ps : 0; })
-      })), PALETA_CATEGORICA_PDF);
+      parrafo('A continuación, un gráfico de barras (con los tres niveles) y uno de línea (solo Satisfactorio) para cada área.', 9);
+      areaPeriodos.forEach(a=>{
+        subtituloPeriodo(a.area);
+        graficaBarras(a.porPeriodo.map(pp=>pp.periodo), [
+          {nombre:'Satisfactorio', valores:a.porPeriodo.map(pp=>pp.ps)},
+          {nombre:'Aceptable', valores:a.porPeriodo.map(pp=>pp.pa)},
+          {nombre:'Elemental', valores:a.porPeriodo.map(pp=>pp.pe)}
+        ], COLOR_DESEMPENO_PDF, 95);
+        graficaLineas(a.porPeriodo.map(pp=>pp.periodo), [
+          {nombre:'Satisfactorio', valores:a.porPeriodo.map(pp=>pp.ps)}
+        ], [hexARgb(C.S)], 95);
+      });
     }
 
     const gradoAreaPeriodos = orderGrade.map(g=>{
-      const porPeriodo = periodosDisponibles.map(p=>{
-        const filasGP = perfX.filter(r=>idText(r[6])===p && gradeOf(r)===g);
-        const areas = orderArea.map(a=>{
-          const rows = filasGP.filter(r=>idText(r[9])===a);
+      const areas = orderArea.map(a=>{
+        const porPeriodo = periodosDisponibles.map(p=>{
+          const rows = perfX.filter(r=>idText(r[6])===p && gradeOf(r)===g && idText(r[9])===a);
           const m = aggLevels(rows,['Elemental','Aceptable','Satisfactorio'],12,13);
           const tot = (m.Elemental||0)+(m.Aceptable||0)+(m.Satisfactorio||0);
+          if(!tot) return null;
           const pe=pct(m.Elemental,tot), ps=pct(m.Satisfactorio,tot);
-          return {area:a, pe, pa:pct(m.Aceptable,tot), ps, tot};
-        }).filter(a=>a.tot>0);
-        return {periodo:p, areas};
-      }).filter(pp=>pp.areas.length);
-      return {grado: gradeName[g], porPeriodo};
-    }).filter(g=>g.porPeriodo.length);
+          return {periodo:p, pe, pa:pct(m.Aceptable,tot), ps};
+        });
+        return {area:a, porPeriodo};
+      }).filter(a=>a.porPeriodo.some(x=>x));
+      return {grado: gradeName[g], areas};
+    }).filter(g=>g.areas.length);
     if(gradoAreaPeriodos.length){
       titulo('Desempeño por grado y área');
-      parrafo('Los resultados de periodos distintos no se suman entre sí, porque corresponden a momentos de evaluación diferentes. Por eso, en esta misma tabla, cada grado agrupa sus periodos, y cada periodo agrupa sus áreas, mostrando el desempeño de cada área dentro de cada grado en cada momento de evaluación.', 9.5);
-      const filasGA = [];
+      parrafo('Los resultados de periodos distintos no se suman entre sí, porque corresponden a momentos de evaluación diferentes. Cada fila es un área; a su derecha, los periodos disponibles aparecen uno junto al otro (Satisfactorio, Aceptable y Elemental de cada uno), para comparar de un vistazo cómo cambió cada área dentro de ese grado a lo largo del año. Una tabla por grado.', 9.5);
+      const pesosGA = [1.5, ...Array(periodosDisponibles.length*3).fill(0.62)];
       gradoAreaPeriodos.forEach(g=>{
-        g.porPeriodo.forEach((pp,pi)=>{
-          pp.areas.forEach((a,ai)=>{
-            filasGA.push([(pi===0&&ai===0)?g.grado:'', ai===0?pp.periodo:'', a.area, pctf(a.ps), pctf(a.pa), pctf(a.pe)]);
-          });
-        });
+        subtituloPeriodo(g.grado);
+        const filasGA = g.areas.map(a=>[
+          a.area,
+          ...periodosDisponibles.flatMap(p=>{
+            const x = a.porPeriodo.find(pp=>pp && pp.periodo===p);
+            return x ? [pctf(x.ps), pctf(x.pa), pctf(x.pe)] : ['—','—','—'];
+          })
+        ]);
+        tablaPeriodosAgrupados(['Área'], periodosDisponibles, ['Sat.','Acep.','Elem.'], filasGA, pesosGA);
       });
-      tabla(['Grado','Periodo','Área','% Satisfactorio','% Aceptable','% Elemental'], filasGA, [0.85,0.85,1.5,1,1,1]);
     }
 
     const atencionPeriodos = periodosDisponibles.map(p=>({
