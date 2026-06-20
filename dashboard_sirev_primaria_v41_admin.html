@@ -2208,6 +2208,15 @@ function compararClaveTerritorialDimension(a,b,dimension){
   }
   return String(aa[last]).localeCompare(String(bb[last]),'es',{numeric:true,sensitivity:'base'});
 }
+function valoresDesempenoDesdeAgg(m){
+  const total = (m.Elemental||0) + (m.Aceptable||0) + (m.Satisfactorio||0);
+  if(!total) return ['—','—','—','—'];
+  const pe = pct(m.Elemental,total), pa = pct(m.Aceptable,total), ps = pct(m.Satisfactorio,total);
+  return [pctf(ps), pctf(pa), pctf(pe), breachIndex(pe,ps).toFixed(2)];
+}
+function agregarNivel(m, level, value){
+  if(level in m) m[level] += (+value || 0);
+}
 
 function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension){
   const dimLabel = dimension==='grado' ? 'Grado' : 'Área';
@@ -2331,6 +2340,7 @@ function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension)
   if(!cfg) return null;
   const periodSet = new Set(periodos);
   const data = new Map();
+  const nacional = new Map();
   const sep = '||';
   const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), dimValue(r)].join(sep);
 
@@ -2345,6 +2355,13 @@ function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension)
     const byPeriod = data.get(k);
     if(!byPeriod.has(p)) byPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
     if(level in byPeriod.get(p)) byPeriod.get(p)[level] += value;
+    const nk = dimValue(r);
+    if(nk && nk!=='undefined'){
+      if(!nacional.has(nk)) nacional.set(nk, new Map());
+      const nByPeriod = nacional.get(nk);
+      if(!nByPeriod.has(p)) nByPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
+      agregarNivel(nByPeriod.get(p), level, value);
+    }
   }
 
   const rows = Array.from(data.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,dimension)).map(k=>{
@@ -2359,6 +2376,16 @@ function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension)
     });
     return [...k.split(sep), ...vals];
   }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
+  if(amb.tipo==='nacional'){
+    const nRows = Array.from(nacional.keys()).sort((a,b)=>{
+      if(dimension==='area'){
+        const ia=orderArea.indexOf(a), ib=orderArea.indexOf(b);
+        return (ia<0?999:ia)-(ib<0?999:ib);
+      }
+      return (parseInt(a,10)||999)-(parseInt(b,10)||999);
+    }).map(k=>['Nacional','Nacional', k, ...periodos.flatMap(p=>valoresDesempenoDesdeAgg(nacional.get(k).get(p)||{}))]);
+    rows.unshift(...nRows);
+  }
 
   return {headers:cfg.headers, periodos, subniveles:['Sat.','Acep.','Elem.','Índ.'], rows, weights:[...cfg.weightsBase, ...Array(periodos.length*4).fill(.62)]};
 }
@@ -2371,6 +2398,7 @@ function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
   const gradoCorto = g => g ? `${g}.º` : '';
   const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), gradoCorto(gradeOf(r))].join(sep);
   const data = new Map();
+  const nacional = new Map();
 
   for(const r of read){
     const g = gradeOf(r);
@@ -2385,6 +2413,11 @@ function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
     const byPeriod = data.get(k);
     if(!byPeriod.has(p)) byPeriod.set(p, Object.fromEntries(readOrder.map(lv=>[lv,0])));
     if(level in byPeriod.get(p)) byPeriod.get(p)[level] += value;
+    const nk = gradoCorto(g);
+    if(!nacional.has(nk)) nacional.set(nk, new Map());
+    const nByPeriod = nacional.get(nk);
+    if(!nByPeriod.has(p)) nByPeriod.set(p, Object.fromEntries(readOrder.map(lv=>[lv,0])));
+    if(level in nByPeriod.get(p)) nByPeriod.get(p)[level] += value;
   }
 
   const rows = Array.from(data.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,'grado')).map(k=>{
@@ -2398,6 +2431,20 @@ function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
     });
     return [...k.split(sep), ...vals];
   }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
+  if(amb.tipo==='nacional'){
+    const nRows = Array.from(nacional.keys()).sort((a,b)=>(parseInt(a,10)||999)-(parseInt(b,10)||999)).map(k=>{
+      const byPeriod = nacional.get(k);
+      const vals = periodos.flatMap(p=>{
+        const m = byPeriod.get(p);
+        if(!m) return readOrder.map(()=> '—');
+        const total = Object.values(m).reduce((a,b)=>a+b,0);
+        if(!total) return readOrder.map(()=> '—');
+        return readOrder.map(lv=>pctf(pct(m[lv]||0,total)));
+      });
+      return ['Nacional','Nacional', k, ...vals];
+    });
+    rows.unshift(...nRows);
+  }
 
   return {headers:cfg.headers, periodos, subniveles:['N1','N2','N3','N4','N5'], rows, weights:[...cfg.weightsBase, ...Array(periodos.length*readOrder.length).fill(.5)], label:cfg.label};
 }
@@ -2409,6 +2456,7 @@ function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
   const sep = '||';
   const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), idText(r[9])].join(sep);
   const byGrade = new Map();
+  const nacionalByGrade = new Map();
 
   for(const r of perf){
     const g = gradeOf(r);
@@ -2425,12 +2473,40 @@ function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
     const byPeriod = byKey.get(k);
     if(!byPeriod.has(p)) byPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
     if(level in byPeriod.get(p)) byPeriod.get(p)[level] += value;
+    const area = idText(r[9]);
+    if(area){
+      if(!nacionalByGrade.has(g)) nacionalByGrade.set(g, new Map());
+      const byArea = nacionalByGrade.get(g);
+      if(!byArea.has(area)) byArea.set(area, new Map());
+      const nByPeriod = byArea.get(area);
+      if(!nByPeriod.has(p)) nByPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
+      agregarNivel(nByPeriod.get(p), level, value);
+    }
   }
 
   const grupos = orderGrade.map(g=>{
     const byKey = byGrade.get(g);
-    if(!byKey) return {grado:`${g}.º`, rows:[]};
-    const rows = Array.from(byKey.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,'area')).map(k=>{
+    const rows = [];
+    const nByArea = nacionalByGrade.get(g);
+    if(nByArea){
+      const nRows = Array.from(nByArea.keys()).sort((a,b)=>{
+        const ia=orderArea.indexOf(a), ib=orderArea.indexOf(b);
+        return (ia<0?999:ia)-(ib<0?999:ib);
+      }).map(area=>{
+        const byPeriod = nByArea.get(area);
+        const vals = periodos.flatMap(p=>{
+          const m = byPeriod.get(p);
+          if(!m) return ['—','—','—'];
+          const total = m.Elemental + m.Aceptable + m.Satisfactorio;
+          if(!total) return ['—','—','—'];
+          return [pctf(pct(m.Satisfactorio,total)), pctf(pct(m.Aceptable,total)), pctf(pct(m.Elemental,total))];
+        });
+        return ['Nacional','Nacional', area, ...vals];
+      });
+      rows.push(...nRows);
+    }
+    if(!byKey) return {grado:`${g}.º`, rows};
+    rows.push(...Array.from(byKey.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,'area')).map(k=>{
       const byPeriod = byKey.get(k);
       const vals = periodos.flatMap(p=>{
         const m = byPeriod.get(p);
@@ -2440,11 +2516,51 @@ function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
         return [pctf(pct(m.Satisfactorio,total)), pctf(pct(m.Aceptable,total)), pctf(pct(m.Elemental,total))];
       });
       return [...k.split(sep), ...vals];
-    }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
+    }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—')));
     return {grado:`${g}.º`, rows};
   }).filter(g=>g.rows.length);
 
   return {headers:cfg.headers, periodos, subniveles:['Sat.','Acep.','Elem.'], grupos, weights:[...cfg.weightsBase, ...Array(periodos.length*3).fill(.62)], label:cfg.label};
+}
+
+function resumenTerritorialEvolucion(amb, periodos, perf, cov){
+  let headers, indices, weights;
+  if(amb.tipo==='distrito'){
+    headers = ['Centro educativo']; indices = [2]; weights = [2.3, ...Array(periodos.length*4).fill(.62)];
+  } else if(amb.tipo==='regional'){
+    headers = ['Distrito']; indices = [1]; weights = [1.75, ...Array(periodos.length*4).fill(.62)];
+  } else if(amb.tipo==='nacional'){
+    headers = ['Regional','Distrito']; indices = [0,1]; weights = [1.25, 1.45, ...Array(periodos.length*4).fill(.58)];
+  } else return null;
+
+  const periodSet = new Set(periodos);
+  const sep = '||';
+  const keyOf = r => indices.map(i=>idText(r[i])).join(sep);
+  const data = new Map();
+  const nacional = new Map();
+  for(const r of perf){
+    const p = idText(r[6]);
+    if(!periodSet.has(p)) continue;
+    const level = idText(r[12]);
+    const value = +r[13] || 0;
+    const k = keyOf(r);
+    if(k && !k.split(sep).some(x=>!x)){
+      if(!data.has(k)) data.set(k, new Map());
+      const byPeriod = data.get(k);
+      if(!byPeriod.has(p)) byPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
+      agregarNivel(byPeriod.get(p), level, value);
+    }
+    if(!nacional.has(p)) nacional.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
+    agregarNivel(nacional.get(p), level, value);
+  }
+  const rows = Array.from(data.keys())
+    .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}))
+    .map(k=>[...k.split(sep), ...periodos.flatMap(p=>valoresDesempenoDesdeAgg(data.get(k).get(p)||{}))])
+    .filter(r=>r.slice(headers.length).some(v=>v!=='—'));
+  if(amb.tipo==='nacional'){
+    rows.unshift(['Nacional','Nacional', ...periodos.flatMap(p=>valoresDesempenoDesdeAgg(nacional.get(p)||{}))]);
+  }
+  return {headers, periodos, subniveles:['Sat.','Acep.','Elem.','Índ.'], rows, weights};
 }
 
 function puntosAtencion(amb, perf, cov){
@@ -3014,6 +3130,47 @@ async function generarInformePDF(){
       y += altoLeyenda + 8;
       doc.setTextColor(20,35,63);
     }
+    async function graficaRegionalHorizontal(tituloGrafico, items, nacional, opciones={}){
+      if(!items || !items.length || nacional==null) return;
+      doc.addPage('a4','landscape');
+      orientacionActual = 'landscape';
+      dibujarEncabezado();
+      doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(0,59,113);
+      doc.text(tituloGrafico, marginX, y); y += 14;
+      const altoFila = 15;
+      const altoGrafico = Math.max(130, items.length*altoFila + 28);
+      const labelW = 138;
+      const chartX = marginX + labelW;
+      const chartW = pageW - marginX*2 - labelW - 28;
+      asegurarEspacio(altoGrafico + 18);
+      const yTop = y;
+      const xVal = v => chartX + (Math.max(0,Math.min(100,v||0))/100)*chartW;
+      doc.setDrawColor(220,230,240); doc.setLineWidth(.5);
+      [0,25,50,75,100].forEach(t=>{
+        const x = xVal(t);
+        doc.line(x, yTop, x, yTop + items.length*altoFila);
+        doc.setFont('helvetica','normal'); doc.setFontSize(6.8); doc.setTextColor(74,96,120);
+        doc.text(`${t}%`, x, yTop + items.length*altoFila + 10, {align:'center'});
+      });
+      const nx = xVal(nacional);
+      doc.setDrawColor(200,16,46); doc.setLineWidth(1);
+      for(let yy=yTop; yy<yTop+items.length*altoFila; yy+=7) doc.line(nx, yy, nx, Math.min(yy+4, yTop+items.length*altoFila));
+      for(let i=0; i<items.length; i++){
+        const it = items[i];
+        if(i>0 && i%24===0) await new Promise(resolve=>setTimeout(resolve,0));
+        const yy = yTop + i*altoFila + 3;
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.4); doc.setTextColor(20,35,63);
+        doc.text(String(it.label), marginX, yy+7);
+        doc.setFillColor(0,93,170);
+        doc.rect(chartX, yy, Math.max(1, xVal(it.value)-chartX), 8, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(6.7); doc.setTextColor(0,59,113);
+        doc.text(pctf(it.value), Math.min(xVal(it.value)+4, chartX+chartW+22), yy+7);
+      }
+      y = yTop + items.length*altoFila + 26;
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(200,16,46);
+      doc.text(`Línea punteada: Nacional (${pctf(nacional)})`, chartX, y); y += 14;
+      doc.setTextColor(20,35,63);
+    }
     function altoEstimadoBarras(categorias, altoPersonalizado){
       // Replica el mismo cálculo que usa graficaBarras internamente, sin dibujar nada,
       // para poder reservar el espacio exacto antes de un subtítulo.
@@ -3038,6 +3195,48 @@ async function generarInformePDF(){
       doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(0,59,113);
       doc.text(periodo, marginX, y); y += 13;
       doc.setTextColor(20,35,63);
+    }
+    function serieRegionalDesempeno(periodo, filtro=()=>true){
+      const regMap = new Map();
+      const nac = {Elemental:0,Aceptable:0,Satisfactorio:0};
+      for(const r of perfX){
+        if(idText(r[6])!==periodo || !filtro(r)) continue;
+        const reg = idText(r[0]);
+        const level = idText(r[12]);
+        const val = +r[13] || 0;
+        if(!regMap.has(reg)) regMap.set(reg,{Elemental:0,Aceptable:0,Satisfactorio:0});
+        agregarNivel(regMap.get(reg), level, val);
+        agregarNivel(nac, level, val);
+      }
+      const valSat = m => {
+        const total = m.Elemental + m.Aceptable + m.Satisfactorio;
+        return total ? pct(m.Satisfactorio,total) : 0;
+      };
+      return {
+        items: Array.from(regMap.entries()).map(([label,m])=>({label,value:valSat(m)})).sort((a,b)=>a.label.localeCompare(b.label,'es',{numeric:true})),
+        nacional: valSat(nac)
+      };
+    }
+    function serieRegionalLectura(periodo, filtro=()=>true){
+      const regMap = new Map();
+      const nac = Object.fromEntries(readOrder.map(lv=>[lv,0]));
+      for(const r of readX){
+        if(idText(r[6])!==periodo || !filtro(r)) continue;
+        const reg = idText(r[0]);
+        const level = idText(r[9]);
+        const val = +r[10] || 0;
+        if(!regMap.has(reg)) regMap.set(reg,Object.fromEntries(readOrder.map(lv=>[lv,0])));
+        if(level in regMap.get(reg)) regMap.get(reg)[level] += val;
+        if(level in nac) nac[level] += val;
+      }
+      const valFlu = m => {
+        const total = Object.values(m).reduce((a,b)=>a+b,0);
+        return total ? pct(m['Lector fluido']||0,total) : 0;
+      };
+      return {
+        items: Array.from(regMap.entries()).map(([label,m])=>({label,value:valFlu(m)})).sort((a,b)=>a.label.localeCompare(b.label,'es',{numeric:true})),
+        nacional: valFlu(nac)
+      };
     }
 
     const nombreAmbito = amb.tipo==='nacional' ? 'Nacional' :
@@ -3077,6 +3276,10 @@ async function generarInformePDF(){
         resumenTerritorial.weights,
         {horizontal:true, titulo:'Resumen territorial de resultados'}
       );
+      if(amb.tipo==='nacional' && periodoReciente){
+        const serie = serieRegionalDesempeno(periodoReciente);
+        await graficaRegionalHorizontal(`Desempeño regional - ${periodoReciente} (% Satisfactorio)`, serie.items, serie.nacional);
+      }
     }
 
     const unidadTerritorial = amb.tipo==='distrito' ? 'centros educativos' : amb.tipo==='regional' ? 'distritos' : 'regionales y distritos';
@@ -3092,6 +3295,14 @@ async function generarInformePDF(){
         resumenTerritorialGrado.weights,
         {horizontal:true, titulo:`Resultados de ${unidadTerritorial} por grado`}
       );
+      if(amb.tipo==='nacional' && periodoReciente){
+        for(const grado of orderGrade){
+          const serie = serieRegionalDesempeno(periodoReciente, r=>gradeOf(r)===grado);
+          if(serie.items.length){
+            await graficaRegionalHorizontal(`Desempeño regional ${grado}.º - ${periodoReciente} (% Satisfactorio)`, serie.items, serie.nacional);
+          }
+        }
+      }
     }
 
     const resumenTerritorialArea = resumenTerritorialPorDimensionEvolucion(amb, periodosDisponibles, perfX, 'area');
@@ -3106,6 +3317,14 @@ async function generarInformePDF(){
         resumenTerritorialArea.weights,
         {horizontal:true, titulo:`Resultados de ${unidadTerritorial} por área`}
       );
+      if(amb.tipo==='nacional' && periodoReciente){
+        for(const area of orderArea){
+          const serie = serieRegionalDesempeno(periodoReciente, r=>idText(r[9])===area);
+          if(serie.items.length){
+            await graficaRegionalHorizontal(`Desempeño regional en ${area} - ${periodoReciente} (% Satisfactorio)`, serie.items, serie.nacional);
+          }
+        }
+      }
     }
 
     titulo('Desempeño');
@@ -3159,6 +3378,14 @@ async function generarInformePDF(){
         {horizontal:true, titulo:`Niveles de lectura por ${lecturaTerritorial.label} y grado`}
       );
       leyendaLectura();
+      if(amb.tipo==='nacional' && periodoReciente){
+        for(const grado of [1,2,3]){
+          const serie = serieRegionalLectura(periodoReciente, r=>gradeOf(r)===grado);
+          if(serie.items.length){
+            await graficaRegionalHorizontal(`Lectura regional ${grado}.º - ${periodoReciente} (% N5)`, serie.items, serie.nacional);
+          }
+        }
+      }
     }
 
     const comparacionPeriodos = periodosDisponibles.map(p=>{
@@ -3199,6 +3426,15 @@ async function generarInformePDF(){
           gradoAreaTerritorial.weights,
           {horizontal:true, titulo:`${g.grado} - Desempeño por área según ${gradoAreaTerritorial.label}`}
         );
+        if(amb.tipo==='nacional' && periodoReciente){
+          const gradoNumero = parseInt(String(g.grado), 10);
+          for(const area of orderArea){
+            const serie = serieRegionalDesempeno(periodoReciente, r=>gradeOf(r)===gradoNumero && idText(r[9])===area);
+            if(serie.items.length){
+              await graficaRegionalHorizontal(`Desempeño regional ${g.grado} ${area} - ${periodoReciente} (% Satisfactorio)`, serie.items, serie.nacional);
+            }
+          }
+        }
       }
     }
 
