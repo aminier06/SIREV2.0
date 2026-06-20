@@ -2187,17 +2187,33 @@ function resumenTerritorialEvolucion(amb, periodos, perf, cov){
   };
 }
 
-function resumenCentrosPorDimensionEvolucion(periodos, perf, dimension){
+function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension){
   const dimLabel = dimension==='grado' ? 'Grado' : 'Área';
   const dimValue = r => dimension==='grado' ? gradeName[gradeOf(r)] : idText(r[9]);
+  let headers, indices, weightsBase;
+  if(amb.tipo==='distrito'){
+    headers = ['Centro educativo', dimLabel];
+    indices = [2];
+    weightsBase = [2.05, .9];
+  } else if(amb.tipo==='regional'){
+    headers = ['Distrito', dimLabel];
+    indices = [1];
+    weightsBase = [1.65, .9];
+  } else if(amb.tipo==='nacional'){
+    headers = ['Regional','Distrito', dimLabel];
+    indices = [0,1];
+    weightsBase = [1.2, 1.45, .85];
+  } else {
+    return null;
+  }
   const sep = '||';
-  const keyOf = r => [idText(r[2]), dimValue(r)].join(sep);
+  const keyOf = r => [...indices.map(i=>idText(r[i])), dimValue(r)].join(sep);
   const keys = Array.from(new Set(perf.map(keyOf)))
     .filter(k=>k && !k.split(sep).some(x=>!x || x==='undefined'))
     .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
 
   const rows = keys.map(k=>{
-    const [centro, dim] = k.split(sep);
+    const labels = k.split(sep);
     const vals = periodos.flatMap(p=>{
       const rowsPerf = perf.filter(r=>idText(r[6])===p && keyOf(r)===k);
       const m = aggLevels(rowsPerf, ['Elemental','Aceptable','Satisfactorio'], 12, 13);
@@ -2207,15 +2223,15 @@ function resumenCentrosPorDimensionEvolucion(periodos, perf, dimension){
       const idxB = breachIndex(pe,ps);
       return [fmt(total), pctf(ps), pctf(pa), pctf(pe), idxB.toFixed(2)];
     });
-    return [centro, dim, ...vals];
-  }).filter(r=>r.slice(2).some(v=>v!=='—'));
+    return [...labels, ...vals];
+  }).filter(r=>r.slice(headers.length).some(v=>v!=='—'));
 
   return {
-    headers: ['Centro educativo', dimLabel],
+    headers,
     periodos,
     subniveles: ['Eval.','Sat.','Acep.','Elem.','Índ.'],
     rows,
-    weights: [2.05, .9, ...Array(periodos.length*5).fill(.55)]
+    weights: [...weightsBase, ...Array(periodos.length*5).fill(.55)]
   };
 }
 
@@ -2226,9 +2242,10 @@ function textoResumenTerritorial(amb){
   return '';
 }
 
-function textoResumenCentrosDimension(dimension){
-  if(dimension==='grado') return 'Esta tabla muestra todos los centros educativos desagregados por grado. Los periodos disponibles se presentan como columnas para observar la evolución temporal de cada grado dentro de cada centro.';
-  return 'Esta tabla muestra todos los centros educativos desagregados por área. Los periodos disponibles se presentan como columnas para observar la evolución temporal de cada área dentro de cada centro.';
+function textoResumenTerritorialDimension(amb, dimension){
+  const base = amb.tipo==='distrito' ? 'centros educativos' : amb.tipo==='regional' ? 'distritos' : 'regionales con sus distritos';
+  const detalle = dimension==='grado' ? 'grado' : 'área';
+  return `Esta tabla muestra los ${base} desagregados por ${detalle}. Los periodos disponibles se presentan como columnas para observar la evolución temporal con el nivel territorial que corresponde al ámbito del informe.`;
 }
 
 function puntosAtencion(amb, perf, cov){
@@ -2804,32 +2821,31 @@ async function generarInformePDF(){
       );
     }
 
-    if(amb.tipo==='distrito'){
-      const resumenCentrosGrado = resumenCentrosPorDimensionEvolucion(periodosDisponibles, perfX, 'grado');
-      if(resumenCentrosGrado && resumenCentrosGrado.rows.length){
-        titulo('Resultados de centros educativos por grado');
-        parrafo(textoResumenCentrosDimension('grado'), 9.5);
-        tablaPeriodosAgrupados(
-          resumenCentrosGrado.headers,
-          resumenCentrosGrado.periodos,
-          resumenCentrosGrado.subniveles,
-          resumenCentrosGrado.rows,
-          resumenCentrosGrado.weights
-        );
-      }
+    const unidadTerritorial = amb.tipo==='distrito' ? 'centros educativos' : amb.tipo==='regional' ? 'distritos' : 'regionales y distritos';
+    const resumenTerritorialGrado = resumenTerritorialPorDimensionEvolucion(amb, periodosDisponibles, perfX, 'grado');
+    if(resumenTerritorialGrado && resumenTerritorialGrado.rows.length){
+      titulo(`Resultados de ${unidadTerritorial} por grado`);
+      parrafo(textoResumenTerritorialDimension(amb, 'grado'), 9.5);
+      tablaPeriodosAgrupados(
+        resumenTerritorialGrado.headers,
+        resumenTerritorialGrado.periodos,
+        resumenTerritorialGrado.subniveles,
+        resumenTerritorialGrado.rows,
+        resumenTerritorialGrado.weights
+      );
+    }
 
-      const resumenCentrosArea = resumenCentrosPorDimensionEvolucion(periodosDisponibles, perfX, 'area');
-      if(resumenCentrosArea && resumenCentrosArea.rows.length){
-        titulo('Resultados de centros educativos por área');
-        parrafo(textoResumenCentrosDimension('area'), 9.5);
-        tablaPeriodosAgrupados(
-          resumenCentrosArea.headers,
-          resumenCentrosArea.periodos,
-          resumenCentrosArea.subniveles,
-          resumenCentrosArea.rows,
-          resumenCentrosArea.weights
-        );
-      }
+    const resumenTerritorialArea = resumenTerritorialPorDimensionEvolucion(amb, periodosDisponibles, perfX, 'area');
+    if(resumenTerritorialArea && resumenTerritorialArea.rows.length){
+      titulo(`Resultados de ${unidadTerritorial} por área`);
+      parrafo(textoResumenTerritorialDimension(amb, 'area'), 9.5);
+      tablaPeriodosAgrupados(
+        resumenTerritorialArea.headers,
+        resumenTerritorialArea.periodos,
+        resumenTerritorialArea.subniveles,
+        resumenTerritorialArea.rows,
+        resumenTerritorialArea.weights
+      );
     }
 
     titulo('Desempeño');
