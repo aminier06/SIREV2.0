@@ -2478,13 +2478,34 @@ async function generarInformePDF(){
       const fontSize = 7.6, padX = 4, padY = 4, lineH = fontSize*1.16;
 
       function colX(i){ let x=marginX; for(let k=0;k<i;k++) x+=anchos[k]; return x; }
+      function esValorNumericoTabla(texto, i){
+        if(i < headFijo.length) return false;
+        const t = String(texto==null?'':texto).trim();
+        return t==='—' || /^-?[\d,.]+%?$/.test(t);
+      }
+      function fuenteAjustadaUnaLinea(texto, ancho){
+        const t = String(texto==null?'':texto);
+        const disponible = Math.max(ancho - padX*1.2, 4);
+        let fs = fontSize;
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(fs);
+        while(fs > 3.6 && doc.getTextWidth(t) > disponible){
+          fs -= 0.2;
+          doc.setFontSize(fs);
+        }
+        return fs;
+      }
       function lineasDeCelda(texto, ancho){
         doc.setFontSize(fontSize);
         return doc.splitTextToSize(String(texto==null?'':texto), Math.max(ancho-padX*2,14));
       }
       function altoDeFilaDatos(fila){
         let max=1;
-        fila.forEach((texto,i)=>{ doc.setFont('helvetica','normal'); const l=lineasDeCelda(texto,anchos[i]); if(l.length>max)max=l.length; });
+        fila.forEach((texto,i)=>{
+          doc.setFont('helvetica','normal');
+          const l = esValorNumericoTabla(texto,i) ? [String(texto==null?'':texto)] : lineasDeCelda(texto,anchos[i]);
+          if(l.length>max)max=l.length;
+        });
         return max*lineH+padY*2;
       }
 
@@ -2541,8 +2562,16 @@ async function generarInformePDF(){
         if(idx%2===1){ doc.setFillColor(244,248,252); doc.rect(marginX, y, anchoTotal, alto, 'F'); }
         doc.setFont('helvetica','normal'); doc.setFontSize(fontSize); doc.setTextColor(20,35,63);
         fila.forEach((texto,i)=>{
-          const lineas = lineasDeCelda(texto, anchos[i]);
-          lineas.forEach((linea,li)=>doc.text(linea, colX(i)+padX, y+padY+lineH*(li+0.8)));
+          if(esValorNumericoTabla(texto,i)){
+            const valor = String(texto==null?'':texto);
+            const fs = fuenteAjustadaUnaLinea(valor, anchos[i]);
+            doc.setFont('helvetica','normal'); doc.setFontSize(fs);
+            doc.text(valor, colX(i)+anchos[i]/2, y+padY+lineH*0.8, {align:'center'});
+            doc.setFontSize(fontSize);
+          } else {
+            const lineas = lineasDeCelda(texto, anchos[i]);
+            lineas.forEach((linea,li)=>doc.text(linea, colX(i)+padX, y+padY+lineH*(li+0.8)));
+          }
         });
         doc.setDrawColor(216,228,241); doc.setLineWidth(0.4);
         for(let i=1;i<nCols;i++){ doc.line(colX(i), y, colX(i), y+alto); }
