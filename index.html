@@ -2402,7 +2402,23 @@ async function generarInformePDF(){
           });
         });
         doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
-        for(let i=1;i<nCols;i++){ doc.line(colX(i), yStart, colX(i), yStart+altoH1+altoH2); }
+        // Líneas que cruzan ambas filas: solo entre columnas fijas y entre
+        // un periodo y el siguiente (para no partir el nombre del periodo
+        // en la fila de arriba).
+        const limitesCompletos = new Set();
+        for(let i=1;i<headFijo.length;i++) limitesCompletos.add(i);
+        for(let g=0; g<=periodos.length; g++){
+          const i = headFijo.length + g*subniveles.length;
+          if(i>0 && i<nCols) limitesCompletos.add(i);
+        }
+        for(let i=1;i<nCols;i++){
+          if(limitesCompletos.has(i)){
+            doc.line(colX(i), yStart, colX(i), yStart+altoH1+altoH2);
+          } else {
+            // Línea solo en la fila inferior (Sat. / Acep. / Elem.)
+            doc.line(colX(i), yStart+altoH1, colX(i), yStart+altoH1+altoH2);
+          }
+        }
         doc.line(colX(headFijo.length), yStart+altoH1, marginX+anchoTotal, yStart+altoH1);
         doc.setDrawColor(0,59,113); doc.setLineWidth(0.8);
         doc.rect(marginX, yStart, anchoTotal, altoH1+altoH2);
