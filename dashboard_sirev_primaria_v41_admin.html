@@ -2137,10 +2137,60 @@ function resumenTerritorialRows(amb, perf, cov){
   return {headers:[...headers,'Evaluados','% Satisfactorio','% Aceptable','% Elemental','Índice','Estado'], rows, weights};
 }
 
+function resumenTerritorialEvolucion(amb, periodos, perf, cov){
+  let headers, indices, weights;
+  if(amb.tipo==='distrito'){
+    headers = ['Centro educativo'];
+    indices = [2];
+    weights = [2.3, ...Array(periodos.length*5).fill(.58)];
+  } else if(amb.tipo==='regional'){
+    headers = ['Distrito'];
+    indices = [1];
+    weights = [1.75, ...Array(periodos.length*5).fill(.58)];
+  } else if(amb.tipo==='nacional'){
+    headers = ['Regional','Distrito'];
+    indices = [0,1];
+    weights = [1.25, 1.45, ...Array(periodos.length*5).fill(.54)];
+  } else {
+    return null;
+  }
+
+  const sep = '||';
+  const keyOf = r => indices.map(i=>idText(r[i])).join(sep);
+  const labelOf = key => key.split(sep);
+  const keys = Array.from(new Set([...perf.map(keyOf), ...cov.map(keyOf)]))
+    .filter(k=>k && !k.split(sep).some(x=>!x))
+    .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
+
+  const rows = keys.map(k=>{
+    const labels = labelOf(k);
+    const vals = periodos.flatMap(p=>{
+      const perfRows = perf.filter(r=>idText(r[6])===p && keyOf(r)===k);
+      const covRows = cov.filter(r=>idText(r[6])===p && keyOf(r)===k);
+      const ev = covRows.reduce((a,r)=>a+(r[10]||0),0);
+      const m = aggLevels(perfRows, ['Elemental','Aceptable','Satisfactorio'], 12, 13);
+      const total = (m.Elemental||0) + (m.Aceptable||0) + (m.Satisfactorio||0);
+      if(!ev && !total) return ['—','—','—','—','—'];
+      const pe = pct(m.Elemental,total), pa = pct(m.Aceptable,total), ps = pct(m.Satisfactorio,total);
+      const idxB = total ? breachIndex(pe,ps) : null;
+      return [fmt(ev), pctf(ps), pctf(pa), pctf(pe), idxB==null?'—':idxB.toFixed(2)];
+    });
+    return [...labels, ...vals];
+  }).filter(r=>r.slice(headers.length).some(v=>v!=='—'));
+
+  return {
+    headers,
+    periodos,
+    subniveles: ['Eval.','Sat.','Acep.','Elem.','Índ.'],
+    rows,
+    weights
+  };
+}
+
 function textoResumenTerritorial(amb){
-  if(amb.tipo==='distrito') return 'El informe distrital incluye el resumen de resultados de sus centros educativos. Cada periodo se presenta por separado para no mezclar momentos de evaluación distintos.';
-  if(amb.tipo==='regional') return 'El informe regional incluye el resumen de resultados de sus distritos. Cada periodo se presenta por separado para mantener la comparación temporal con claridad.';
-  if(amb.tipo==='nacional') return 'El informe Nacional incluye el resumen de las regionales con sus distritos. Cada periodo se presenta por separado para observar la estructura territorial completa.';
+  if(amb.tipo==='distrito') return 'El informe distrital incluye el resumen de resultados de sus centros educativos. Los periodos disponibles aparecen como columnas para observar la evolución temporal de cada centro.';
+  if(amb.tipo==='regional') return 'El informe regional incluye el resumen de resultados de sus distritos. Los periodos disponibles aparecen como columnas para comparar la evolución temporal de cada distrito.';
+  if(amb.tipo==='nacional') return 'El informe Nacional incluye el resumen de las regionales con sus distritos. Los periodos disponibles aparecen como columnas para observar la evolución territorial completa.';
   return '';
 }
 
@@ -2675,20 +2725,17 @@ async function generarInformePDF(){
         }), [1,1,1,1]);
     }
 
-    const resumenTerritorialPeriodos = periodosDisponibles.map(p=>({
-      periodo: p,
-      datos: resumenTerritorialRows(amb, perfX.filter(r=>idText(r[6])===p), covX.filter(r=>idText(r[6])===p))
-    })).filter(x=>x.datos && x.datos.rows.length);
-    if(resumenTerritorialPeriodos.length){
+    const resumenTerritorial = resumenTerritorialEvolucion(amb, periodosDisponibles, perfX, covX);
+    if(resumenTerritorial && resumenTerritorial.rows.length){
       titulo('Resumen territorial de resultados');
       parrafo(textoResumenTerritorial(amb), 9.5);
-      const headersTerr = ['Periodo', ...resumenTerritorialPeriodos[0].datos.headers];
-      const pesosTerr = [0.85, ...resumenTerritorialPeriodos[0].datos.weights];
-      const filasTerr = [];
-      resumenTerritorialPeriodos.forEach(({periodo, datos})=>{
-        datos.rows.forEach((r,i)=>filasTerr.push([i===0?periodo:'', ...r]));
-      });
-      tabla(headersTerr, filasTerr, pesosTerr);
+      tablaPeriodosAgrupados(
+        resumenTerritorial.headers,
+        resumenTerritorial.periodos,
+        resumenTerritorial.subniveles,
+        resumenTerritorial.rows,
+        resumenTerritorial.weights
+      );
     }
 
     titulo('Desempeño');
