@@ -2248,7 +2248,7 @@ function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
   const sep = '||';
   const gradoCorto = g => g ? `${g}.º` : '';
   const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), gradoCorto(gradeOf(r))].join(sep);
-  const readShort = ['Pre','Sil','Sil-alf','Alf','Flu'];
+  const readShort = ['N1','N2','N3','N4','N5'];
   const keys = Array.from(new Set(read.filter(r=>[1,2,3].includes(gradeOf(r))).map(keyOf)))
     .filter(k=>k && !k.split(sep).some(x=>!x || x==='undefined'))
     .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
@@ -2479,6 +2479,7 @@ async function generarInformePDF(){
     let pageH = doc.internal.pageSize.getHeight();
     const marginX = 42;
     let y = 0;
+    let orientacionActual = 'portrait';
 
     function dibujarEncabezado(){
       pageW = doc.internal.pageSize.getWidth();
@@ -2500,15 +2501,36 @@ async function generarInformePDF(){
       doc.text('Sistema de Resultados de Evaluaciones del Nivel Primario · Ministerio de Educación', textX, 41);
       doc.setFontSize(8.5);
       doc.text('Viceministerio de Servicios Técnicos y Pedagógicos — Dirección de Educación Primaria', textX, 53);
+      doc.setFillColor(0,59,113);
+      doc.rect(textX-2, 10, pageW-textX-20, 52, 'F');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(10.5);
+      doc.text('Ministerio de Educación', textX, 20);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.text('Viceministerio de Servicios Técnicos y Pedagógicos', textX, 34);
+      doc.text('Dirección de Educación Primaria', textX, 47);
+      doc.setFont('helvetica','bold'); doc.setFontSize(10);
+      doc.text('SIREV Primaria', textX, 59);
       doc.setTextColor(20,35,63);
       y = 88;
     }
     dibujarEncabezado();
 
+    function asegurarVertical(){
+      if(orientacionActual!=='portrait'){
+        doc.addPage('a4','portrait');
+        orientacionActual = 'portrait';
+        dibujarEncabezado();
+      }
+    }
     function asegurarEspacio(alto){
-      if(y + alto > pageH - 50){ doc.addPage(); dibujarEncabezado(); }
+      if(y + alto > pageH - 50){
+        doc.addPage('a4', orientacionActual==='landscape' ? 'landscape' : 'portrait');
+        dibujarEncabezado();
+      }
     }
     function titulo(texto, tam=13, alturaBloqueSiguiente){
+      asegurarVertical();
       // Se reserva el alto del título más un colchón generoso (párrafo +
       // una tabla típica de este informe), para que el título no quede
       // huérfano al final de una página con su contenido en la siguiente.
@@ -2520,12 +2542,22 @@ async function generarInformePDF(){
       doc.setTextColor(20,35,63);
     }
     function parrafo(texto, tam=10){
+      asegurarVertical();
       doc.setFont('helvetica','normal'); doc.setFontSize(tam);
       const lineas = doc.splitTextToSize(texto, pageW - marginX*2);
       lineas.forEach(linea=>{ asegurarEspacio(15); doc.text(linea, marginX, y); y += 14; });
       y += 6;
     }
+    function leyendaLectura(){
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.8); doc.setTextColor(74,96,120);
+      const texto = 'Leyenda: N1 = Lector de imágenes; N2 = Lector de sílabas; N3 = Lector de palabras; N4 = Lector no fluido; N5 = Lector fluido.';
+      const lineas = doc.splitTextToSize(texto, pageW - marginX*2);
+      lineas.forEach(linea=>{ asegurarEspacio(12); doc.text(linea, marginX, y); y += 11; });
+      y += 8;
+      doc.setTextColor(20,35,63);
+    }
     function tabla(head, body, pesos){
+      asegurarVertical();
       const anchoTotal = pageW - marginX*2;
       const p = pesos || head.map(()=>1);
       const sumaP = p.reduce((a,b)=>a+b,0);
@@ -2587,6 +2619,7 @@ async function generarInformePDF(){
       const usarHorizontal = !!opciones.horizontal;
       if(usarHorizontal){
         doc.addPage('a4','landscape');
+        orientacionActual = 'landscape';
         dibujarEncabezado();
         if(opciones.titulo){
           doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(0,59,113);
@@ -2602,6 +2635,11 @@ async function generarInformePDF(){
       const fontSize = 7.6, padX = 4, padY = 4, lineH = fontSize*1.16;
 
       function colX(i){ let x=marginX; for(let k=0;k<i;k++) x+=anchos[k]; return x; }
+      function nuevaPaginaTabla(){
+        if(usarHorizontal) doc.addPage('a4','landscape');
+        else doc.addPage();
+        dibujarEncabezado();
+      }
       function esValorNumericoTabla(texto, i){
         if(i < headFijo.length) return false;
         const t = String(texto==null?'':texto).trim();
@@ -2707,23 +2745,20 @@ async function generarInformePDF(){
       const altoTablaCompleta = altoH1+altoH2+altosFilas.reduce((a,b)=>a+b,0);
       const altoUtilPaginaVacia = (pageH-50)-88;
       if(altoTablaCompleta<=altoUtilPaginaVacia && y+altoTablaCompleta > pageH-50){
-        doc.addPage(); dibujarEncabezado();
+        nuevaPaginaTabla();
       }
 
       dibujarEncabezados();
       filas.forEach((fila,idx)=>{
         const alto = altoDeFilaDatos(fila);
-        if(y+alto > pageH-50){ doc.addPage(); dibujarEncabezado(); dibujarEncabezados(); }
+        if(y+alto > pageH-50){ nuevaPaginaTabla(); dibujarEncabezados(); }
         dibujarFilaDatos(fila, idx);
       });
       y += 14;
-      if(usarHorizontal){
-        doc.addPage('a4','portrait');
-        dibujarEncabezado();
-      }
     }
 
     function graficaBarras(categorias, series, colores, altoPersonalizado){
+      asegurarVertical();
       const anchoTotal = pageW - marginX*2;
       const altoBarras = altoPersonalizado || 120;
       const fuenteEtiqueta = 7.3;
@@ -2779,6 +2814,7 @@ async function generarInformePDF(){
       doc.setTextColor(20,35,63);
     }
     function graficaLineas(categoriasX, series, colores, altoPersonalizado){
+      asegurarVertical();
       const anchoTotal = pageW - marginX*2;
       const altoGrafico = altoPersonalizado || 130;
       const altoEtiquetas = 16;
@@ -2847,6 +2883,7 @@ async function generarInformePDF(){
       return altoBarras + altoEtiquetas + 22 + 10;
     }
     function subtituloPeriodo(periodo, alturaBloqueSiguiente){
+      asegurarVertical();
       // Se reserva el espacio del subtítulo MÁS la altura real de lo que sigue
       // (un gráfico o el encabezado de una tabla), para que nunca queden en
       // páginas distintas. Si no se indica altura, se usa un valor de
@@ -2975,6 +3012,7 @@ async function generarInformePDF(){
         lecturaTerritorial.weights,
         {horizontal:true, titulo:`Niveles de lectura por ${lecturaTerritorial.label} y grado`}
       );
+      leyendaLectura();
     }
 
     const comparacionPeriodos = periodosDisponibles.map(p=>{
