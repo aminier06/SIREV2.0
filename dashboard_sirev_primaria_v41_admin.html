@@ -2043,19 +2043,19 @@ function ambitoActual(f, cov){
     return {tipo:'distrito', nombre:f.dist, regional: row?idText(row[0]):''};
   }
   if(f.reg) return {tipo:'regional', nombre:f.reg};
-  return {tipo:'nacional', nombre:'Todo el país'};
+  return {tipo:'nacional', nombre:'Nacional'};
 }
 
 function statsNivelSuperior(f, amb){
   const niveles = [];
   if(amb.tipo==='centro'){
     if(amb.distrito) niveles.push({label:`el Distrito ${amb.distrito}`, stats: scopeStats({...f, centro:'', centroText:'', dist:amb.distrito, reg:amb.regional})});
-    niveles.push({label:'el país', stats: scopeStats({...f, centro:'', centroText:'', dist:'', reg:''})});
+    niveles.push({label:'Nacional', stats: scopeStats({...f, centro:'', centroText:'', dist:'', reg:''})});
   } else if(amb.tipo==='distrito'){
     if(amb.regional) niveles.push({label:`la Regional ${amb.regional}`, stats: scopeStats({...f, dist:'', reg:amb.regional})});
-    niveles.push({label:'el país', stats: scopeStats({...f, dist:'', reg:''})});
+    niveles.push({label:'Nacional', stats: scopeStats({...f, dist:'', reg:''})});
   } else if(amb.tipo==='regional'){
-    niveles.push({label:'el país', stats: scopeStats({...f, reg:''})});
+    niveles.push({label:'Nacional', stats: scopeStats({...f, reg:''})});
   }
   return niveles;
 }
@@ -2082,6 +2082,66 @@ function breachRowsFromData(perf, cov, idx, label){
     const pe=pct(m.Elemental,tot), pa=pct(m.Aceptable,tot), ps=pct(m.Satisfactorio,tot), idxB=breachIndex(pe,ps), ev=covMap[k]||0, st=rankStatus(idxB,ev);
     return {label,k,ev,pe,pa,ps,idxB,estado:st[1]};
   }).sort((a,b)=>b.idxB-a.idxB);
+}
+
+function resumenTerritorialRows(amb, perf, cov){
+  let headers, indices, weights;
+  if(amb.tipo==='distrito'){
+    headers = ['Centro educativo'];
+    indices = [2];
+    weights = [2.2, .75, .9, .9, .9, .75, 1.25];
+  } else if(amb.tipo==='regional'){
+    headers = ['Distrito'];
+    indices = [1];
+    weights = [1.7, .75, .9, .9, .9, .75, 1.25];
+  } else if(amb.tipo==='nacional'){
+    headers = ['Regional','Distrito'];
+    indices = [0,1];
+    weights = [1.35,1.55,.75,.9,.9,.9,.75,1.25];
+  } else {
+    return null;
+  }
+
+  const sep = '||';
+  const keyOf = r => indices.map(i=>idText(r[i])).join(sep);
+  const labelOf = key => key.split(sep);
+  const perfMap = {};
+  const covMap = {};
+
+  for(const r of perf){
+    const k = keyOf(r);
+    if(!k || k.split(sep).some(x=>!x)) continue;
+    perfMap[k] = perfMap[k] || [];
+    perfMap[k].push(r);
+  }
+  for(const r of cov){
+    const k = keyOf(r);
+    if(!k || k.split(sep).some(x=>!x)) continue;
+    covMap[k] = (covMap[k] || 0) + (r[10] || 0);
+  }
+
+  const keys = Array.from(new Set([...Object.keys(perfMap), ...Object.keys(covMap)]))
+    .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
+
+  const rows = keys.map(k=>{
+    const rowsPerf = perfMap[k] || [];
+    const m = aggLevels(rowsPerf, ['Elemental','Aceptable','Satisfactorio'], 12, 13);
+    const total = (m.Elemental||0) + (m.Aceptable||0) + (m.Satisfactorio||0);
+    const pe = pct(m.Elemental,total), pa = pct(m.Aceptable,total), ps = pct(m.Satisfactorio,total);
+    const idxB = total ? breachIndex(pe,ps) : null;
+    const ev = covMap[k] || 0;
+    const estado = idxB!=null ? rankStatus(idxB,ev)[1] : 'Sin datos de desempeño';
+    return [...labelOf(k), fmt(ev), pctf(ps), pctf(pa), pctf(pe), idxB==null?'—':idxB.toFixed(2), estado];
+  }).filter(r=>String(r[headers.length]||'0')!=='0' || r[r.length-1]!=='Sin datos de desempeño');
+
+  return {headers:[...headers,'Evaluados','% Satisfactorio','% Aceptable','% Elemental','Índice','Estado'], rows, weights};
+}
+
+function textoResumenTerritorial(amb){
+  if(amb.tipo==='distrito') return 'El informe distrital incluye el resumen de resultados de sus centros educativos. Cada periodo se presenta por separado para no mezclar momentos de evaluación distintos.';
+  if(amb.tipo==='regional') return 'El informe regional incluye el resumen de resultados de sus distritos. Cada periodo se presenta por separado para mantener la comparación temporal con claridad.';
+  if(amb.tipo==='nacional') return 'El informe Nacional incluye el resumen de las regionales con sus distritos. Cada periodo se presenta por separado para observar la estructura territorial completa.';
+  return '';
 }
 
 function puntosAtencion(amb, perf, cov){
@@ -2160,7 +2220,7 @@ function fraseEstado(st){
 
 function textoResumen(amb, st, periodo){
   const cov = st.cov;
-  const sujeto = amb.tipo==='nacional' ? 'A nivel nacional' :
+  const sujeto = amb.tipo==='nacional' ? 'A nivel Nacional' :
     amb.tipo==='regional' ? `En la Regional ${amb.nombre}` :
     amb.tipo==='distrito' ? `En el Distrito ${amb.nombre}` :
     `En el centro educativo ${amb.nombre}`;
@@ -2275,7 +2335,7 @@ async function generarInformePDF(){
       doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
       doc.text('Sistema de Resultados de Evaluaciones del Nivel Primario · Ministerio de Educación', textX, 41);
       doc.setFontSize(8.5);
-      doc.text('Dirección de Educación Primaria — Viceministerio de Servicios Técnicos y Pedagógicos', textX, 53);
+      doc.text('Viceministerio de Servicios Técnicos y Pedagógicos — Dirección de Educación Primaria', textX, 53);
       doc.setTextColor(20,35,63);
       y = 88;
     }
@@ -2284,8 +2344,11 @@ async function generarInformePDF(){
     function asegurarEspacio(alto){
       if(y + alto > pageH - 50){ doc.addPage(); dibujarEncabezado(); }
     }
-    function titulo(texto, tam=13){
-      asegurarEspacio(30);
+    function titulo(texto, tam=13, alturaBloqueSiguiente){
+      // Se reserva el alto del título más un colchón generoso (párrafo +
+      // una tabla típica de este informe), para que el título no quede
+      // huérfano al final de una página con su contenido en la siguiente.
+      asegurarEspacio(30 + (alturaBloqueSiguiente!=null ? alturaBloqueSiguiente : 230));
       doc.setFont('helvetica','bold'); doc.setFontSize(tam); doc.setTextColor(0,59,113);
       doc.text(texto, marginX, y); y += 8;
       doc.setDrawColor(200,16,46); doc.setLineWidth(1.4);
@@ -2399,7 +2462,23 @@ async function generarInformePDF(){
           });
         });
         doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
-        for(let i=1;i<nCols;i++){ doc.line(colX(i), yStart, colX(i), yStart+altoH1+altoH2); }
+        // Líneas que cruzan ambas filas: solo entre columnas fijas y entre
+        // un periodo y el siguiente (para no partir el nombre del periodo
+        // en la fila de arriba).
+        const limitesCompletos = new Set();
+        for(let i=1;i<headFijo.length;i++) limitesCompletos.add(i);
+        for(let g=0; g<=periodos.length; g++){
+          const i = headFijo.length + g*subniveles.length;
+          if(i>0 && i<nCols) limitesCompletos.add(i);
+        }
+        for(let i=1;i<nCols;i++){
+          if(limitesCompletos.has(i)){
+            doc.line(colX(i), yStart, colX(i), yStart+altoH1+altoH2);
+          } else {
+            // Línea solo en la fila inferior (Sat. / Acep. / Elem.)
+            doc.line(colX(i), yStart+altoH1, colX(i), yStart+altoH1+altoH2);
+          }
+        }
         doc.line(colX(headFijo.length), yStart+altoH1, marginX+anchoTotal, yStart+altoH1);
         doc.setDrawColor(0,59,113); doc.setLineWidth(0.8);
         doc.rect(marginX, yStart, anchoTotal, altoH1+altoH2);
@@ -2546,14 +2625,32 @@ async function generarInformePDF(){
       y += altoLeyenda + 8;
       doc.setTextColor(20,35,63);
     }
-    function subtituloPeriodo(periodo){
-      asegurarEspacio(22);
+    function altoEstimadoBarras(categorias, altoPersonalizado){
+      // Replica el mismo cálculo que usa graficaBarras internamente, sin dibujar nada,
+      // para poder reservar el espacio exacto antes de un subtítulo.
+      const altoBarras = altoPersonalizado || 120;
+      const anchoTotal = pageW - marginX*2;
+      const nCat = Math.max(1, categorias.length);
+      const gapGrupo = 12;
+      const anchoGrupo = (anchoTotal - gapGrupo*Math.max(0,nCat-1)) / nCat;
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.3);
+      const lineasCategoria = categorias.map(c=>doc.splitTextToSize(String(c), Math.max(anchoGrupo-4,20)));
+      const maxLineasCat = Math.max(1, ...lineasCategoria.map(l=>l.length));
+      const altoEtiquetas = maxLineasCat*9 + 8;
+      return altoBarras + altoEtiquetas + 22 + 10;
+    }
+    function subtituloPeriodo(periodo, alturaBloqueSiguiente){
+      // Se reserva el espacio del subtítulo MÁS la altura real de lo que sigue
+      // (un gráfico o el encabezado de una tabla), para que nunca queden en
+      // páginas distintas. Si no se indica altura, se usa un valor de
+      // seguridad generoso.
+      asegurarEspacio(23 + (alturaBloqueSiguiente!=null ? alturaBloqueSiguiente : 150));
       doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(0,59,113);
       doc.text(periodo, marginX, y); y += 13;
       doc.setTextColor(20,35,63);
     }
 
-    const nombreAmbito = amb.tipo==='nacional' ? 'Nivel nacional' :
+    const nombreAmbito = amb.tipo==='nacional' ? 'Nacional' :
       amb.tipo==='regional' ? `Regional ${amb.nombre}` :
       amb.tipo==='distrito' ? `Distrito ${amb.nombre}` :
       `Centro educativo: ${amb.nombre}`;
@@ -2576,6 +2673,22 @@ async function generarInformePDF(){
           const a = covAgg(covX.filter(r=>idText(r[6])===p));
           return [p, fmt(a.mat), fmt(a.ev), pctf(pct(a.ev,a.mat))];
         }), [1,1,1,1]);
+    }
+
+    const resumenTerritorialPeriodos = periodosDisponibles.map(p=>({
+      periodo: p,
+      datos: resumenTerritorialRows(amb, perfX.filter(r=>idText(r[6])===p), covX.filter(r=>idText(r[6])===p))
+    })).filter(x=>x.datos && x.datos.rows.length);
+    if(resumenTerritorialPeriodos.length){
+      titulo('Resumen territorial de resultados');
+      parrafo(textoResumenTerritorial(amb), 9.5);
+      const headersTerr = ['Periodo', ...resumenTerritorialPeriodos[0].datos.headers];
+      const pesosTerr = [0.85, ...resumenTerritorialPeriodos[0].datos.weights];
+      const filasTerr = [];
+      resumenTerritorialPeriodos.forEach(({periodo, datos})=>{
+        datos.rows.forEach((r,i)=>filasTerr.push([i===0?periodo:'', ...r]));
+      });
+      tabla(headersTerr, filasTerr, pesosTerr);
     }
 
     titulo('Desempeño');
@@ -2635,7 +2748,7 @@ async function generarInformePDF(){
       tabla(['Grado','Periodo', ...readOrder], filasLec, [0.8,0.9,1,1,1,1,1]);
       parrafo('A continuación, un gráfico de barras (con los cinco niveles) y uno de línea (solo lector fluido, el aspecto elegido para la tendencia) para cada grado.', 9);
       lecturaPorGradoPeriodos.forEach(g=>{
-        subtituloPeriodo(g.grado);
+        subtituloPeriodo(g.grado, altoEstimadoBarras(g.porPeriodo.map(pp=>pp.periodo), 95));
         graficaBarras(g.porPeriodo.map(pp=>pp.periodo),
           readOrder.map((lv,li)=>({nombre:lv, valores:g.porPeriodo.map(pp=>pp.niveles[li])})),
           COLOR_LECTURA5_PDF, 95);
@@ -2690,7 +2803,7 @@ async function generarInformePDF(){
       tabla(['Grado','Periodo','% Satisfactorio','% Aceptable','% Elemental'], filasGrado, [1,1.1,1,1,1]);
       parrafo('A continuación, un gráfico de barras (con los tres niveles) y uno de línea (solo Satisfactorio, el aspecto elegido para la tendencia) para cada grado.', 9);
       gradoPeriodos.forEach(g=>{
-        subtituloPeriodo(g.grado);
+        subtituloPeriodo(g.grado, altoEstimadoBarras(g.porPeriodo.map(pp=>pp.periodo), 95));
         graficaBarras(g.porPeriodo.map(pp=>pp.periodo), [
           {nombre:'Satisfactorio', valores:g.porPeriodo.map(pp=>pp.ps)},
           {nombre:'Aceptable', valores:g.porPeriodo.map(pp=>pp.pa)},
@@ -2722,7 +2835,7 @@ async function generarInformePDF(){
       tabla(['Área','Periodo','% Satisfactorio','% Aceptable','% Elemental'], filasArea, [1.6,1.1,1,1,1]);
       parrafo('A continuación, un gráfico de barras (con los tres niveles) y uno de línea (solo Satisfactorio) para cada área.', 9);
       areaPeriodos.forEach(a=>{
-        subtituloPeriodo(a.area);
+        subtituloPeriodo(a.area, altoEstimadoBarras(a.porPeriodo.map(pp=>pp.periodo), 95));
         graficaBarras(a.porPeriodo.map(pp=>pp.periodo), [
           {nombre:'Satisfactorio', valores:a.porPeriodo.map(pp=>pp.ps)},
           {nombre:'Aceptable', valores:a.porPeriodo.map(pp=>pp.pa)},
@@ -2753,7 +2866,7 @@ async function generarInformePDF(){
       parrafo('Los resultados de periodos distintos no se suman entre sí, porque corresponden a momentos de evaluación diferentes. Cada fila es un área; a su derecha, los periodos disponibles aparecen uno junto al otro (Satisfactorio, Aceptable y Elemental de cada uno), para comparar de un vistazo cómo cambió cada área dentro de ese grado a lo largo del año. Una tabla por grado.', 9.5);
       const pesosGA = [1.5, ...Array(periodosDisponibles.length*3).fill(0.62)];
       gradoAreaPeriodos.forEach(g=>{
-        subtituloPeriodo(g.grado);
+        subtituloPeriodo(g.grado, 100);
         const filasGA = g.areas.map(a=>[
           a.area,
           ...periodosDisponibles.flatMap(p=>{
