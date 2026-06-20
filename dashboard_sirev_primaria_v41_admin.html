@@ -2187,11 +2187,48 @@ function resumenTerritorialEvolucion(amb, periodos, perf, cov){
   };
 }
 
+function resumenCentrosPorDimensionEvolucion(periodos, perf, dimension){
+  const dimLabel = dimension==='grado' ? 'Grado' : 'Área';
+  const dimValue = r => dimension==='grado' ? gradeName[gradeOf(r)] : idText(r[9]);
+  const sep = '||';
+  const keyOf = r => [idText(r[2]), dimValue(r)].join(sep);
+  const keys = Array.from(new Set(perf.map(keyOf)))
+    .filter(k=>k && !k.split(sep).some(x=>!x || x==='undefined'))
+    .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
+
+  const rows = keys.map(k=>{
+    const [centro, dim] = k.split(sep);
+    const vals = periodos.flatMap(p=>{
+      const rowsPerf = perf.filter(r=>idText(r[6])===p && keyOf(r)===k);
+      const m = aggLevels(rowsPerf, ['Elemental','Aceptable','Satisfactorio'], 12, 13);
+      const total = (m.Elemental||0) + (m.Aceptable||0) + (m.Satisfactorio||0);
+      if(!total) return ['—','—','—','—','—'];
+      const pe = pct(m.Elemental,total), pa = pct(m.Aceptable,total), ps = pct(m.Satisfactorio,total);
+      const idxB = breachIndex(pe,ps);
+      return [fmt(total), pctf(ps), pctf(pa), pctf(pe), idxB.toFixed(2)];
+    });
+    return [centro, dim, ...vals];
+  }).filter(r=>r.slice(2).some(v=>v!=='—'));
+
+  return {
+    headers: ['Centro educativo', dimLabel],
+    periodos,
+    subniveles: ['Eval.','Sat.','Acep.','Elem.','Índ.'],
+    rows,
+    weights: [2.05, .9, ...Array(periodos.length*5).fill(.55)]
+  };
+}
+
 function textoResumenTerritorial(amb){
   if(amb.tipo==='distrito') return 'El informe distrital incluye el resumen de resultados de sus centros educativos. Los periodos disponibles aparecen como columnas para observar la evolución temporal de cada centro.';
   if(amb.tipo==='regional') return 'El informe regional incluye el resumen de resultados de sus distritos. Los periodos disponibles aparecen como columnas para comparar la evolución temporal de cada distrito.';
   if(amb.tipo==='nacional') return 'El informe Nacional incluye el resumen de las regionales con sus distritos. Los periodos disponibles aparecen como columnas para observar la evolución territorial completa.';
   return '';
+}
+
+function textoResumenCentrosDimension(dimension){
+  if(dimension==='grado') return 'Esta tabla muestra todos los centros educativos desagregados por grado. Los periodos disponibles se presentan como columnas para observar la evolución temporal de cada grado dentro de cada centro.';
+  return 'Esta tabla muestra todos los centros educativos desagregados por área. Los periodos disponibles se presentan como columnas para observar la evolución temporal de cada área dentro de cada centro.';
 }
 
 function puntosAtencion(amb, perf, cov){
@@ -2765,6 +2802,34 @@ async function generarInformePDF(){
         resumenTerritorial.rows,
         resumenTerritorial.weights
       );
+    }
+
+    if(amb.tipo==='distrito'){
+      const resumenCentrosGrado = resumenCentrosPorDimensionEvolucion(periodosDisponibles, perfX, 'grado');
+      if(resumenCentrosGrado && resumenCentrosGrado.rows.length){
+        titulo('Resultados de centros educativos por grado');
+        parrafo(textoResumenCentrosDimension('grado'), 9.5);
+        tablaPeriodosAgrupados(
+          resumenCentrosGrado.headers,
+          resumenCentrosGrado.periodos,
+          resumenCentrosGrado.subniveles,
+          resumenCentrosGrado.rows,
+          resumenCentrosGrado.weights
+        );
+      }
+
+      const resumenCentrosArea = resumenCentrosPorDimensionEvolucion(periodosDisponibles, perfX, 'area');
+      if(resumenCentrosArea && resumenCentrosArea.rows.length){
+        titulo('Resultados de centros educativos por área');
+        parrafo(textoResumenCentrosDimension('area'), 9.5);
+        tablaPeriodosAgrupados(
+          resumenCentrosArea.headers,
+          resumenCentrosArea.periodos,
+          resumenCentrosArea.subniveles,
+          resumenCentrosArea.rows,
+          resumenCentrosArea.weights
+        );
+      }
     }
 
     titulo('Desempeño');
