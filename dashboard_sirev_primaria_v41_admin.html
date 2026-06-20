@@ -9,7 +9,6 @@
 <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf-autotable.min.js"></script>
 <script src="catalogo_centros_primaria_v41.js?v=41"></script>
 <script src="dashboard_data_core_v41_part1.js?v=41"></script>
 <script src="dashboard_data_core_v41_part2.js?v=41"></script>
@@ -2305,15 +2304,52 @@ async function generarInformePDF(){
       }
       doc.addImage(dataUrl,'PNG',marginX,y,w,h); y += h + 18;
     }
-    function tabla(head, body){
-      asegurarEspacio(40);
-      doc.autoTable({
-        startY:y, head:[head], body, margin:{left:marginX,right:marginX},
-        styles:{fontSize:8.5, textColor:[20,35,63]},
-        headStyles:{fillColor:[0,59,113], textColor:255, fontStyle:'bold'},
-        theme:'grid'
+    function tabla(head, body, pesos){
+      const anchoTotal = pageW - marginX*2;
+      const p = pesos || head.map(()=>1);
+      const sumaP = p.reduce((a,b)=>a+b,0);
+      const anchos = p.map(v=>anchoTotal*v/sumaP);
+      const fontSize = 8.2, padX = 5, padY = 5, lineH = fontSize*1.18;
+
+      function lineasDeFila(fila, negrita){
+        doc.setFont('helvetica', negrita?'bold':'normal'); doc.setFontSize(fontSize);
+        return fila.map((texto,i)=>doc.splitTextToSize(String(texto==null?'':texto), Math.max(anchos[i]-padX*2,20)));
+      }
+      function altoDeFila(lineas){
+        return Math.max(1,...lineas.map(l=>l.length))*lineH + padY*2;
+      }
+      function dibujarFila(lineas, negrita, fondoAlterno){
+        const alto = altoDeFila(lineas);
+        if(negrita){ doc.setFillColor(0,59,113); doc.rect(marginX, y, anchoTotal, alto, 'F'); doc.setTextColor(255,255,255); }
+        else{
+          if(fondoAlterno){ doc.setFillColor(244,248,252); doc.rect(marginX, y, anchoTotal, alto, 'F'); }
+          doc.setTextColor(20,35,63);
+        }
+        doc.setFont('helvetica', negrita?'bold':'normal'); doc.setFontSize(fontSize);
+        let x = marginX;
+        lineas.forEach((ls,i)=>{
+          ls.forEach((linea,li)=>doc.text(linea, x+padX, y+padY+lineH*(li+0.78)));
+          x += anchos[i];
+        });
+        doc.setDrawColor(216,228,241); doc.setLineWidth(0.5);
+        doc.rect(marginX, y, anchoTotal, alto);
+        y += alto;
+        doc.setTextColor(20,35,63);
+      }
+      function dibujarEncabezadoTabla(){
+        const lh = lineasDeFila(head, true);
+        asegurarEspacio(altoDeFila(lh)+6);
+        dibujarFila(lh, true, false);
+      }
+
+      dibujarEncabezadoTabla();
+      body.forEach((fila,idx)=>{
+        const lf = lineasDeFila(fila, false);
+        const alto = altoDeFila(lf);
+        if(y + alto > pageH - 50){ doc.addPage(); dibujarEncabezado(); dibujarEncabezadoTabla(); }
+        dibujarFila(lf, false, idx%2===1);
       });
-      y = doc.lastAutoTable.finalY + 16;
+      y += 14;
     }
 
     const nombreAmbito = amb.tipo==='nacional' ? 'Nivel nacional' :
@@ -2338,7 +2374,7 @@ async function generarInformePDF(){
       ['Satisfactorio', pctf(stActual.perf.ps)],
       ['Aceptable', pctf(stActual.perf.pa)],
       ['Elemental', pctf(stActual.perf.pe)]
-    ]);
+    ], [2,1]);
     if(imgs.cDist) imagenGrafica(imgs.cDist, 'Distribución del desempeño por periodo');
 
     titulo('Lectura');
@@ -2348,7 +2384,7 @@ async function generarInformePDF(){
     if(porLecturaGrado && porLecturaGrado.length){
       titulo('Niveles de lectura por grado (primer ciclo)', 11);
       parrafo('Este desglose aplica solo a primero, segundo y tercer grado, ya que la prueba de lectura no se administra en el segundo ciclo.', 9.5);
-      tabla(['Grado', ...readOrder], porLecturaGrado.map(g=>[g.grado, ...g.niveles.map(p=>pctf(p))]));
+      tabla(['Grado', ...readOrder], porLecturaGrado.map(g=>[g.grado, ...g.niveles.map(p=>pctf(p))]), [0.8,1,1,1,1,1]);
     }
 
     if(niveles.length){
@@ -2357,7 +2393,7 @@ async function generarInformePDF(){
       tabla(['Ámbito','% Satisfactorio','% Aceptable','% Elemental'], [
         [nombreAmbito, pctf(stActual.perf.ps), pctf(stActual.perf.pa), pctf(stActual.perf.pe)],
         ...niveles.map(n=>[n.label.replace(/^(el|la) /,''), pctf(n.stats.perf.ps), pctf(n.stats.perf.pa), pctf(n.stats.perf.pe)])
-      ]);
+      ], [2,1,1,1]);
     }
 
     titulo('Evolución entre periodos');
@@ -2366,7 +2402,7 @@ async function generarInformePDF(){
       tabla(['Periodo','% Satisfactorio','% Aceptable','% Elemental'], [
         [evo.inicial, pctf(evo.statsIni.perf.ps), pctf(evo.statsIni.perf.pa), pctf(evo.statsIni.perf.pe)],
         [evo.final, pctf(evo.statsFin.perf.ps), pctf(evo.statsFin.perf.pa), pctf(evo.statsFin.perf.pe)]
-      ]);
+      ], [1.3,1,1,1]);
       if(imgs.cEvolPerf) imagenGrafica(imgs.cEvolPerf, 'Evolución del desempeño por periodo');
     }
 
@@ -2374,7 +2410,7 @@ async function generarInformePDF(){
       titulo('Desempeño por grado');
       parrafo('Este es el desempeño dentro del ámbito seleccionado, desagregado por grado, de primero a sexto.');
       tabla(['Grado','% Satisfactorio','% Aceptable','% Elemental'],
-        porGrado.map(g=>[g.grado, pctf(g.ps), pctf(g.pa), pctf(g.pe)]));
+        porGrado.map(g=>[g.grado, pctf(g.ps), pctf(g.pa), pctf(g.pe)]), [1.3,1,1,1]);
       if(imgs.cGrade) imagenGrafica(imgs.cGrade, 'Desempeño por grado');
     }
 
@@ -2382,7 +2418,7 @@ async function generarInformePDF(){
       titulo('Desempeño por área');
       parrafo('Este es el desempeño dentro del ámbito seleccionado, desagregado por área o asignatura, ordenado de mayor a menor prioridad de atención.');
       tabla(['Área','% Satisfactorio','% Aceptable','% Elemental'],
-        porArea.map(a=>[a.area, pctf(a.ps), pctf(a.pa), pctf(a.pe)]));
+        porArea.map(a=>[a.area, pctf(a.ps), pctf(a.pa), pctf(a.pe)]), [1.8,1,1,1]);
       if(imgs.cArea) imagenGrafica(imgs.cArea, 'Desempeño por área');
     }
 
@@ -2395,7 +2431,7 @@ async function generarInformePDF(){
         doc.text(g.grado, marginX, y); y += 14;
         doc.setTextColor(20,35,63);
         tabla(['Área','% Satisfactorio','% Aceptable','% Elemental'],
-          g.areas.map(a=>[a.area, pctf(a.ps), pctf(a.pa), pctf(a.pe)]));
+          g.areas.map(a=>[a.area, pctf(a.ps), pctf(a.pa), pctf(a.pe)]), [1.8,1,1,1]);
       });
     }
 
@@ -2403,7 +2439,7 @@ async function generarInformePDF(){
       titulo(`Puntos de atención por ${atencion.label.toLowerCase()}`);
       parrafo(`Dentro de este ámbito, estos son los ${atencion.label.toLowerCase()}s con mayor índice de priorización, es decir, los que requieren atención más urgente según los datos disponibles.`);
       tabla(['#',atencion.label,'Evaluados','Índice','% Satisfactorio','Estado'],
-        atencion.rows.map((r,i)=>[i+1, r.k, fmt(r.ev), r.idxB.toFixed(2), pctf(r.ps), r.estado]));
+        atencion.rows.map((r,i)=>[i+1, r.k, fmt(r.ev), r.idxB.toFixed(2), pctf(r.ps), r.estado]), [0.4,2.3,0.9,0.8,1.1,1.4]);
     }
 
     titulo('Nota metodológica', 11);
