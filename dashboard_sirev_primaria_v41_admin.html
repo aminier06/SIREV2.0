@@ -2482,7 +2482,9 @@ async function generarInformePDF(){
     doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(74,96,120);
     doc.text(nombreAmbito, marginX, y); y += 14;
     doc.text(`Periodos incluidos: ${fExport.periods.length?fExport.periods.join(', '):'sin datos'} (se muestran todos para comparar)`, marginX, y); y += 14;
-    doc.text(`Generado el ${new Date().toLocaleDateString('es-DO',{day:'numeric',month:'long',year:'numeric'})}`, marginX, y); y += 22;
+    doc.text(`Generado el ${new Date().toLocaleDateString('es-DO',{day:'numeric',month:'long',year:'numeric'})}`, marginX, y); y += 13;
+    doc.setFontSize(7.5); doc.setTextColor(150,162,178);
+    doc.text('Versión del generador del informe: v4 (tablas consolidadas por periodo, gráficos de línea)', marginX, y); y += 16;
     doc.setTextColor(20,35,63);
 
     titulo('Resumen del ámbito');
