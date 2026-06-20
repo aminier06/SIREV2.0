@@ -8,6 +8,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf-autotable.min.js"></script>
 <script src="catalogo_centros_primaria_v41.js?v=41"></script>
 <script src="dashboard_data_core_v41_part1.js?v=41"></script>
 <script src="dashboard_data_core_v41_part2.js?v=41"></script>
@@ -1196,6 +1198,17 @@ html, body, #matrix, #matrix details, #matrix summary{
   margin:0;color:#fff;font-size:15px;background:none;padding:0;
 }
 
+/* v47: botón de informe descriptivo en PDF */
+button.pdf-btn{
+  background:linear-gradient(135deg,var(--azul),var(--azul2));
+  color:#fff;
+  border-color:var(--azul);
+  box-shadow:0 8px 18px rgba(0,59,113,.20);
+}
+button.pdf-btn:hover{filter:brightness(1.06)}
+button.pdf-btn:disabled{opacity:.65;cursor:wait}
+.buttons small.pdf-hint{color:var(--muted);font-size:11px;line-height:1.35;margin-top:-3px}
+
 </style>
 </head>
 <body>
@@ -1219,7 +1232,7 @@ html, body, #matrix, #matrix details, #matrix summary{
     </div>
   </div>
 </header>
-<div class="layout"><aside><label>Regional</label><select id="fRegional"></select><label>Distrito</label><select id="fDistrito"></select><label>Centro educativo</label><div class="center-filter"><input id="fCentro" placeholder="Escriba código o nombre" autocomplete="off"><div id="centerSuggest" class="suggestions"></div></div><label>Sector</label><select id="fSector"></select><label>Tipo de centro</label><select id="fTipo"></select><label>Tanda</label><select id="fTanda"></select><div class="buttons"><button onclick="exportResumen()" class="secondary">Exportar datos visibles</button></div></aside><main><div class="tabs"><button class="tab active" onclick="showPane('resumen',this)">Resumen</button><button class="tab" onclick="showPane('desempeno',this)">Desempeño</button><button class="tab" onclick="showPane('lectura',this)">Lectura</button><button class="tab" onclick="showPane('evolucion',this)">Evolución</button><button class="tab" onclick="showPane('brechas',this)">Brechas</button><button class="tab" onclick="showPane('matriz',this)">Matriz</button></div>
+<div class="layout"><aside><label>Regional</label><select id="fRegional"></select><label>Distrito</label><select id="fDistrito"></select><label>Centro educativo</label><div class="center-filter"><input id="fCentro" placeholder="Escriba código o nombre" autocomplete="off"><div id="centerSuggest" class="suggestions"></div></div><label>Sector</label><select id="fSector"></select><label>Tipo de centro</label><select id="fTipo"></select><label>Tanda</label><select id="fTanda"></select><div class="buttons"><button onclick="exportResumen()" class="secondary">Exportar datos visibles</button><button id="btnInformePDF" onclick="generarInformePDF()" class="pdf-btn">Descargar informe PDF</button><small class="pdf-hint">El informe usa el ámbito y los filtros seleccionados arriba.</small></div></aside><main><div class="tabs"><button class="tab active" onclick="showPane('resumen',this)">Resumen</button><button class="tab" onclick="showPane('desempeno',this)">Desempeño</button><button class="tab" onclick="showPane('lectura',this)">Lectura</button><button class="tab" onclick="showPane('evolucion',this)">Evolución</button><button class="tab" onclick="showPane('brechas',this)">Brechas</button><button class="tab" onclick="showPane('matriz',this)">Matriz</button></div>
 <section id="resumen" class="pane active"><div class="card-block summary-unified"><h3>Resumen general de la evaluación</h3><div class="summary-unified-body"><div class="coverage-layout"><div class="coverage" id="coverageCards"></div><div id="publicGauge" class="gauge-wrap"></div></div><div id="generalIndicators" class="indicator-grid"></div></div></div><div class="grid2"><div class="section chart-card-clean"><h2>Distribución del desempeño por periodo</h2><div class="body"><canvas id="cDist"></canvas></div></div><div class="section chart-card-clean"><h2>Distribución de niveles de lectura por periodo</h2><div class="body"><canvas id="cRead"></canvas></div></div></div></section>
 <section id="desempeno" class="pane"><div class="section"><h2>Desempeño por grado</h2><div class="body"><canvas id="cGrade"></canvas></div></div><div class="section"><h2>Desempeño por área</h2><div class="body"><canvas id="cArea"></canvas></div></div></section>
 <section id="lectura" class="pane"><div class="section"><h2>Niveles de lectura por grado</h2><div class="body"><canvas id="cReadGrade"></canvas></div></div><div class="section"><h2>Tabla de lectura por grado y periodo</h2><div class="body tablewrap"><table id="tLect"></table></div></div></section>
@@ -1977,6 +1990,434 @@ function exportMatrizXls(){
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, ('Matriz '+tipoLabel).substring(0,31));
   xlsDownload(wb, filename);
+}
+
+/* ── INFORME DESCRIPTIVO EN PDF ───────────────────────────────────────────
+   Reutiliza los mismos cálculos del dashboard (cobertura, niveles de
+   desempeño y lectura, índice de priorización) para un ámbito determinado,
+   y los redacta como texto en lugar de mostrarlos solo en tablas.
+   ───────────────────────────────────────────────────────────────────── */
+
+function computeScopeRows(fOverride){
+  const perf = perfSource(fOverride).filter(r=>matchPerf(r,fOverride));
+  const read = READ.filter(r=>matchRead(r,fOverride));
+  const cov  = COV.filter(r=>matchBase(r,fOverride,true));
+  return {perf, read, cov};
+}
+
+function scopeStats(fOverride){
+  const {perf, read, cov} = computeScopeRows(fOverride);
+  const covA = covAgg(cov);
+  const perfA = aggLevels(perf,['Elemental','Aceptable','Satisfactorio'],12,13);
+  const perfTotal = (perfA.Elemental||0)+(perfA.Aceptable||0)+(perfA.Satisfactorio||0);
+  const pe = pct(perfA.Elemental,perfTotal), pa = pct(perfA.Aceptable,perfTotal), ps = pct(perfA.Satisfactorio,perfTotal);
+  const readA = aggLevels(read,readOrder,9,10);
+  const readTotal = Object.values(readA).reduce((a,b)=>a+b,0);
+  const fluido = readA['Lector fluido']||0, noFluido = readA['Lector no fluido']||0;
+  const idxB = perfTotal ? breachIndex(pe,ps) : null;
+  const st = idxB!=null ? rankStatus(idxB, covA.ev) : null;
+  return {
+    cov: covA,
+    perf: {pe,pa,ps,total:perfTotal},
+    read: {fluidoPct:pct(fluido,readTotal), noFluidoPct:pct(noFluido,readTotal), total:readTotal},
+    idxB, st
+  };
+}
+
+function ambitoActual(){
+  const f = current.f || filters();
+  if(f.centro){
+    const row = current.cov[0] || COV.find(r=>idText(r[2])===f.centro);
+    return {tipo:'centro', nombre:f.centro, distrito: row?idText(row[1]):'', regional: row?idText(row[0]):''};
+  }
+  if(f.dist){
+    const row = current.cov[0] || COV.find(r=>idText(r[1])===f.dist);
+    return {tipo:'distrito', nombre:f.dist, regional: row?idText(row[0]):''};
+  }
+  if(f.reg) return {tipo:'regional', nombre:f.reg};
+  return {tipo:'nacional', nombre:'Todo el país'};
+}
+
+function statsNivelSuperior(){
+  const f = current.f || filters();
+  const amb = ambitoActual();
+  const niveles = [];
+  if(amb.tipo==='centro'){
+    if(amb.distrito) niveles.push({label:`el Distrito ${amb.distrito}`, stats: scopeStats({...f, centro:'', centroText:'', dist:amb.distrito, reg:amb.regional})});
+    niveles.push({label:'el país', stats: scopeStats({...f, centro:'', centroText:'', dist:'', reg:''})});
+  } else if(amb.tipo==='distrito'){
+    if(amb.regional) niveles.push({label:`la Regional ${amb.regional}`, stats: scopeStats({...f, dist:'', reg:amb.regional})});
+    niveles.push({label:'el país', stats: scopeStats({...f, dist:'', reg:''})});
+  } else if(amb.tipo==='regional'){
+    niveles.push({label:'el país', stats: scopeStats({...f, reg:''})});
+  }
+  return niveles;
+}
+
+function statsEvolucionPeriodos(){
+  const f = current.f || filters();
+  const periodosConDatos = orderPeriod.filter(p=>current.cov.some(r=>idText(r[6])===p));
+  if(periodosConDatos.length<2) return null;
+  const inicial = periodosConDatos[0], final = periodosConDatos[periodosConDatos.length-1];
+  return {
+    inicial, final,
+    statsIni: scopeStats({...f, periods:[inicial]}),
+    statsFin: scopeStats({...f, periods:[final]})
+  };
+}
+
+function puntosAtencion(){
+  const amb = ambitoActual();
+  let idx, label;
+  if(amb.tipo==='nacional'){ idx=0; label='Regional'; }
+  else if(amb.tipo==='regional'){ idx=1; label='Distrito'; }
+  else if(amb.tipo==='distrito'){ idx=2; label='Centro educativo'; }
+  else return null;
+  const rows = breachRows(idx,label).filter(r=>r.ev>0);
+  return {label, rows: rows.slice(0,5)};
+}
+
+function desempenoPorArea(){
+  const f = current.f || filters();
+  if(f.area) return null; // ya filtrado a una sola área: no hay nada que desglosar
+  const areas = orderArea.filter(a=>current.perf.some(r=>idText(r[9])===a));
+  if(areas.length<2) return null;
+  return areas.map(a=>{
+    const rows = current.perf.filter(r=>idText(r[9])===a);
+    const m = aggLevels(rows,['Elemental','Aceptable','Satisfactorio'],12,13);
+    const tot = (m.Elemental||0)+(m.Aceptable||0)+(m.Satisfactorio||0);
+    const pe = pct(m.Elemental,tot), ps = pct(m.Satisfactorio,tot);
+    return {area:a, pe, pa: pct(m.Aceptable,tot), ps, idxB: tot?breachIndex(pe,ps):0};
+  }).sort((x,y)=>y.idxB-x.idxB);
+}
+
+function desempenoPorGrado(){
+  const f = current.f || filters();
+  if(f.g) return null; // ya filtrado a un solo grado: no hay nada que desglosar
+  const grados = orderGrade.filter(g=>current.perf.some(r=>gradeOf(r)===g));
+  if(grados.length<2) return null;
+  return grados.map(g=>{
+    const rows = current.perf.filter(r=>gradeOf(r)===g);
+    const m = aggLevels(rows,['Elemental','Aceptable','Satisfactorio'],12,13);
+    const tot = (m.Elemental||0)+(m.Aceptable||0)+(m.Satisfactorio||0);
+    const pe = pct(m.Elemental,tot), ps = pct(m.Satisfactorio,tot);
+    return {grado:gradeName[g], pe, pa: pct(m.Aceptable,tot), ps};
+  });
+}
+
+function desempenoPorGradoYArea(){
+  const f = current.f || filters();
+  if(f.g || f.area) return null; // si ya hay un grado o área fijo, no hay cruce que mostrar
+  const grados = orderGrade.filter(g=>current.perf.some(r=>gradeOf(r)===g));
+  const areas = orderArea.filter(a=>current.perf.some(r=>idText(r[9])===a));
+  if(grados.length<2 || areas.length<2) return null;
+  return grados.map(g=>{
+    const filasGrado = current.perf.filter(r=>gradeOf(r)===g);
+    const porArea = areas.map(a=>{
+      const rows = filasGrado.filter(r=>idText(r[9])===a);
+      const m = aggLevels(rows,['Elemental','Aceptable','Satisfactorio'],12,13);
+      const tot = (m.Elemental||0)+(m.Aceptable||0)+(m.Satisfactorio||0);
+      const pe = pct(m.Elemental,tot), ps = pct(m.Satisfactorio,tot);
+      return {area:a, pe, pa: pct(m.Aceptable,tot), ps, tot};
+    }).filter(a=>a.tot>0);
+    return {grado: gradeName[g], areas: porArea};
+  }).filter(g=>g.areas.length);
+}
+
+function lecturaPorGrado(){
+  const f = current.f || filters();
+  if(f.g) return null; // ya filtrado a un solo grado
+  if(f.ciclo===2) return null; // segundo ciclo no aplica para lectura
+  const gradosPrimerCiclo = [1,2,3].filter(g=>current.read.some(r=>gradeOf(r)===g));
+  if(!gradosPrimerCiclo.length) return null;
+  return gradosPrimerCiclo.map(g=>{
+    const rows = current.read.filter(r=>gradeOf(r)===g);
+    const m = aggLevels(rows, readOrder, 9, 10);
+    const tot = Object.values(m).reduce((a,b)=>a+b,0);
+    return {grado: gradeName[g], niveles: readOrder.map(lv=>(tot?pct(m[lv]||0,tot):0))};
+  });
+}
+
+function fraseEstado(st){
+  if(!st) return '';
+  if(st[0]==='low') return 'Esto ubica al ámbito en un nivel de prioridad alta: conviene revisar pronto las estrategias de apoyo.';
+  if(st[0]==='mid') return 'Esto representa una atención moderada: hay margen de mejora, aunque la situación no es crítica.';
+  return 'Esto refleja un avance favorable en comparación con el resto.';
+}
+
+function textoResumen(amb, st){
+  const cov = st.cov;
+  const sujeto = amb.tipo==='nacional' ? 'A nivel nacional' :
+    amb.tipo==='regional' ? `En la Regional ${amb.nombre}` :
+    amb.tipo==='distrito' ? `En el Distrito ${amb.nombre}` :
+    `En el centro educativo ${amb.nombre}`;
+  let txt = `${sujeto} se registraron ${fmt(cov.mat)} estudiantes matriculados, de los cuales ${fmt(cov.ev)} fueron evaluados, es decir, ${pctf(pct(cov.ev,cov.mat))} de cobertura.`;
+  if(amb.tipo!=='centro'){
+    txt += ` Esta cifra agrupa ${fmt(cov.regs)} regional(es), ${fmt(cov.dists)} distrito(s) y ${fmt(cov.cent)} centro(s) con registro de resultados.`;
+  }
+  return txt;
+}
+
+function textoDesempeno(st){
+  const {pe,pa,ps,total} = st.perf;
+  if(!total) return 'No hay suficientes datos de desempeño para este ámbito con los filtros seleccionados.';
+  let txt = `En el componente de desempeño, ${pctf(ps)} de los estudiantes evaluados se ubicó en el nivel Satisfactorio, ${pctf(pa)} en Aceptable y ${pctf(pe)} en Elemental.`;
+  if(st.idxB!=null) txt += ` El índice de priorización calculado para este ámbito es de ${st.idxB.toFixed(2)} puntos. ${fraseEstado(st.st)}`;
+  return txt;
+}
+
+function textoLectura(st, soloSegundoCiclo){
+  if(soloSegundoCiclo) return 'El indicador de niveles de lectura no aplica para los grados de 4to a 6to.';
+  const {fluidoPct,noFluidoPct,total} = st.read;
+  if(!total) return 'No hay suficientes datos de lectura para este ámbito con los filtros seleccionados.';
+  return `En lectura, ${pctf(fluidoPct)} de los estudiantes evaluados se clasificó como lector fluido, mientras que ${pctf(noFluidoPct)} se mantiene en el nivel de lector no fluido.`;
+}
+
+function textoComparacion(stActual, niveles){
+  if(!niveles.length) return '';
+  return niveles.map(n=>{
+    const s = n.stats;
+    if(!s.perf.total) return `No se cuenta con datos comparables de ${n.label}.`;
+    const diff = stActual.perf.ps - s.perf.ps;
+    const direccion = diff>0.05 ? 'por encima' : diff<-0.05 ? 'por debajo' : 'prácticamente igual a';
+    return `Frente a ${n.label} (${pctf(s.perf.ps)} en Satisfactorio), este ámbito se ubica ${direccion} en ${pctf(Math.abs(diff))} puntos porcentuales.`;
+  }).join(' ');
+}
+
+function textoEvolucion(evo){
+  if(!evo) return 'No hay más de un periodo con datos para este ámbito, por lo que no es posible describir una evolución.';
+  const diff = evo.statsFin.perf.ps - evo.statsIni.perf.ps;
+  const verbo = diff>0.05 ? 'aumentó' : diff<-0.05 ? 'disminuyó' : 'se mantuvo prácticamente estable';
+  return `Entre ${evo.inicial} y ${evo.final}, el porcentaje de estudiantes en el nivel Satisfactorio ${verbo}, pasando de ${pctf(evo.statsIni.perf.ps)} a ${pctf(evo.statsFin.perf.ps)}.`;
+}
+
+function captureChartImage(canvasId){
+  const c = document.getElementById(canvasId);
+  if(!c || !charts[canvasId]) return null;
+  try{ return c.toDataURL('image/png',1.0); }catch(e){ return null; }
+}
+
+function prepararGraficasParaExport(ids){
+  return new Promise(resolve=>{
+    const panes = [...document.querySelectorAll('.pane')];
+    const estilosOriginales = panes.map(p=>p.style.display);
+    panes.forEach(p=>p.style.display='block');
+    ids.forEach(id=>{ if(charts[id]){ charts[id].resize(); charts[id].update('none'); } });
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const imgs = {};
+      ids.forEach(id=>{ imgs[id]=captureChartImage(id); });
+      panes.forEach((p,i)=>p.style.display=estilosOriginales[i]);
+      resolve(imgs);
+    }));
+  });
+}
+
+let LOGO_MINERD_PROMISE = null;
+function cargarLogoInstitucional(){
+  if(LOGO_MINERD_PROMISE) return LOGO_MINERD_PROMISE;
+  LOGO_MINERD_PROMISE = new Promise(resolve=>{
+    const img = new Image();
+    img.onload = ()=>resolve(img);
+    img.onerror = ()=>resolve(null);
+    img.src = 'logominerd.jpeg';
+  });
+  return LOGO_MINERD_PROMISE;
+}
+
+async function generarInformePDF(){
+  const btn = document.getElementById('btnInformePDF');
+  if(!window.jspdf){ alert('La librería para generar PDF no se cargó. Verifique la conexión a internet e intente de nuevo.'); return; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Generando informe…'; }
+  try{
+    const f = current.f || filters();
+    const amb = ambitoActual();
+    const stActual = scopeStats(f);
+    const niveles = statsNivelSuperior();
+    const evo = statsEvolucionPeriodos();
+    const atencion = puntosAtencion();
+    const porArea = desempenoPorArea();
+    const porGrado = desempenoPorGrado();
+    const porGradoArea = desempenoPorGradoYArea();
+    const porLecturaGrado = lecturaPorGrado();
+    const soloSegundoCiclo = (f.ciclo===2) || (f.g && f.g>=4);
+
+    const idsGraficas = ['cDist','cRead','cGrade','cArea'];
+    if(evo) idsGraficas.push('cEvolPerf','cEvolRead');
+    const [imgs, logoImg] = await Promise.all([
+      prepararGraficasParaExport(idsGraficas),
+      cargarLogoInstitucional()
+    ]);
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({unit:'pt', format:'a4'});
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const marginX = 42;
+    let y = 0;
+
+    function dibujarEncabezado(){
+      doc.setFillColor(0,59,113);
+      doc.rect(0,0,pageW,64,'F');
+      let textX = marginX;
+      if(logoImg){
+        const logoSize = 42, logoX = marginX, logoY = 11;
+        doc.setFillColor(255,255,255);
+        doc.roundedRect(logoX, logoY, logoSize, logoSize, 6, 6, 'F');
+        try{ doc.addImage(logoImg, 'JPEG', logoX+4, logoY+4, logoSize-8, logoSize-8); }catch(e){ /* si falla, se omite sin interrumpir el informe */ }
+        textX = logoX + logoSize + 14;
+      }
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(14);
+      doc.text('SIREV Primaria', textX, 26);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+      doc.text('Sistema de Resultados de Evaluaciones del Nivel Primario · Ministerio de Educación', textX, 41);
+      doc.setFontSize(8.5);
+      doc.text('Dirección de Educación Primaria — Viceministerio de Servicios Técnicos y Pedagógicos', textX, 53);
+      doc.setTextColor(20,35,63);
+      y = 88;
+    }
+    dibujarEncabezado();
+
+    function asegurarEspacio(alto){
+      if(y + alto > pageH - 50){ doc.addPage(); dibujarEncabezado(); }
+    }
+    function titulo(texto, tam=13){
+      asegurarEspacio(30);
+      doc.setFont('helvetica','bold'); doc.setFontSize(tam); doc.setTextColor(0,59,113);
+      doc.text(texto, marginX, y); y += 8;
+      doc.setDrawColor(200,16,46); doc.setLineWidth(1.4);
+      doc.line(marginX, y, marginX+60, y); y += 16;
+      doc.setTextColor(20,35,63);
+    }
+    function parrafo(texto, tam=10){
+      doc.setFont('helvetica','normal'); doc.setFontSize(tam);
+      const lineas = doc.splitTextToSize(texto, pageW - marginX*2);
+      lineas.forEach(linea=>{ asegurarEspacio(15); doc.text(linea, marginX, y); y += 14; });
+      y += 6;
+    }
+    function imagenGrafica(dataUrl, etiqueta){
+      if(!dataUrl) return;
+      const w = pageW - marginX*2, h = w*0.46;
+      asegurarEspacio(h+30);
+      if(etiqueta){
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(0,59,113);
+        doc.text(etiqueta, marginX, y); y += 14; doc.setTextColor(20,35,63);
+      }
+      doc.addImage(dataUrl,'PNG',marginX,y,w,h); y += h + 18;
+    }
+    function tabla(head, body){
+      asegurarEspacio(40);
+      doc.autoTable({
+        startY:y, head:[head], body, margin:{left:marginX,right:marginX},
+        styles:{fontSize:8.5, textColor:[20,35,63]},
+        headStyles:{fillColor:[0,59,113], textColor:255, fontStyle:'bold'},
+        theme:'grid'
+      });
+      y = doc.lastAutoTable.finalY + 16;
+    }
+
+    const nombreAmbito = amb.tipo==='nacional' ? 'Nivel nacional' :
+      amb.tipo==='regional' ? `Regional ${amb.nombre}` :
+      amb.tipo==='distrito' ? `Distrito ${amb.nombre}` :
+      `Centro educativo: ${amb.nombre}`;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(0,59,113);
+    doc.text('Informe descriptivo de resultados', marginX, y); y += 20;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(74,96,120);
+    doc.text(nombreAmbito, marginX, y); y += 14;
+    doc.text(`Periodo(s): ${(f.periods&&f.periods.length)?f.periods.join(', '):'Todos'}`, marginX, y); y += 14;
+    doc.text(`Generado el ${new Date().toLocaleDateString('es-DO',{day:'numeric',month:'long',year:'numeric'})}`, marginX, y); y += 22;
+    doc.setTextColor(20,35,63);
+
+    titulo('Resumen del ámbito');
+    parrafo(textoResumen(amb, stActual));
+
+    titulo('Desempeño');
+    parrafo(textoDesempeno(stActual));
+    if(stActual.perf.total) tabla(['Nivel','% de estudiantes'], [
+      ['Satisfactorio', pctf(stActual.perf.ps)],
+      ['Aceptable', pctf(stActual.perf.pa)],
+      ['Elemental', pctf(stActual.perf.pe)]
+    ]);
+    if(imgs.cDist) imagenGrafica(imgs.cDist, 'Distribución del desempeño por periodo');
+
+    titulo('Lectura');
+    parrafo(textoLectura(stActual, soloSegundoCiclo));
+    if(!soloSegundoCiclo && imgs.cRead) imagenGrafica(imgs.cRead, 'Distribución de niveles de lectura por periodo');
+
+    if(porLecturaGrado && porLecturaGrado.length){
+      titulo('Niveles de lectura por grado (primer ciclo)', 11);
+      parrafo('Este desglose aplica solo a primero, segundo y tercer grado, ya que la prueba de lectura no se administra en el segundo ciclo.', 9.5);
+      tabla(['Grado', ...readOrder], porLecturaGrado.map(g=>[g.grado, ...g.niveles.map(p=>pctf(p))]));
+    }
+
+    if(niveles.length){
+      titulo('Comparación con el nivel superior');
+      parrafo(textoComparacion(stActual, niveles));
+      tabla(['Ámbito','% Satisfactorio','% Aceptable','% Elemental'], [
+        [nombreAmbito, pctf(stActual.perf.ps), pctf(stActual.perf.pa), pctf(stActual.perf.pe)],
+        ...niveles.map(n=>[n.label.replace(/^(el|la) /,''), pctf(n.stats.perf.ps), pctf(n.stats.perf.pa), pctf(n.stats.perf.pe)])
+      ]);
+    }
+
+    titulo('Evolución entre periodos');
+    parrafo(textoEvolucion(evo));
+    if(evo){
+      tabla(['Periodo','% Satisfactorio','% Aceptable','% Elemental'], [
+        [evo.inicial, pctf(evo.statsIni.perf.ps), pctf(evo.statsIni.perf.pa), pctf(evo.statsIni.perf.pe)],
+        [evo.final, pctf(evo.statsFin.perf.ps), pctf(evo.statsFin.perf.pa), pctf(evo.statsFin.perf.pe)]
+      ]);
+      if(imgs.cEvolPerf) imagenGrafica(imgs.cEvolPerf, 'Evolución del desempeño por periodo');
+    }
+
+    if(porGrado && porGrado.length){
+      titulo('Desempeño por grado');
+      parrafo('Este es el desempeño dentro del ámbito seleccionado, desagregado por grado, de primero a sexto.');
+      tabla(['Grado','% Satisfactorio','% Aceptable','% Elemental'],
+        porGrado.map(g=>[g.grado, pctf(g.ps), pctf(g.pa), pctf(g.pe)]));
+      if(imgs.cGrade) imagenGrafica(imgs.cGrade, 'Desempeño por grado');
+    }
+
+    if(porArea && porArea.length){
+      titulo('Desempeño por área');
+      parrafo('Este es el desempeño dentro del ámbito seleccionado, desagregado por área o asignatura, ordenado de mayor a menor prioridad de atención.');
+      tabla(['Área','% Satisfactorio','% Aceptable','% Elemental'],
+        porArea.map(a=>[a.area, pctf(a.ps), pctf(a.pa), pctf(a.pe)]));
+      if(imgs.cArea) imagenGrafica(imgs.cArea, 'Desempeño por área');
+    }
+
+    if(porGradoArea && porGradoArea.length){
+      titulo('Desempeño por grado y área');
+      parrafo('A continuación, el desempeño de cada área dentro de cada grado, para distinguir si las dificultades se concentran en una asignatura específica o se repiten en todas.');
+      porGradoArea.forEach(g=>{
+        asegurarEspacio(26);
+        doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(0,59,113);
+        doc.text(g.grado, marginX, y); y += 14;
+        doc.setTextColor(20,35,63);
+        tabla(['Área','% Satisfactorio','% Aceptable','% Elemental'],
+          g.areas.map(a=>[a.area, pctf(a.ps), pctf(a.pa), pctf(a.pe)]));
+      });
+    }
+
+    if(atencion && atencion.rows.length){
+      titulo(`Puntos de atención por ${atencion.label.toLowerCase()}`);
+      parrafo(`Dentro de este ámbito, estos son los ${atencion.label.toLowerCase()}s con mayor índice de priorización, es decir, los que requieren atención más urgente según los datos disponibles.`);
+      tabla(['#',atencion.label,'Evaluados','Índice','% Satisfactorio','Estado'],
+        atencion.rows.map((r,i)=>[i+1, r.k, fmt(r.ev), r.idxB.toFixed(2), pctf(r.ps), r.estado]));
+    }
+
+    titulo('Nota metodológica', 11);
+    parrafo('El índice de priorización combina el porcentaje de estudiantes en el nivel Elemental (60% del peso) con el complemento del porcentaje en el nivel Satisfactorio (40% del peso); valores más altos indican mayor necesidad de atención. Los ámbitos con menos de 30 estudiantes evaluados se señalan con una nota de cautela en el dashboard, por tratarse de una base de datos pequeña.', 9);
+
+    const fechaArchivo = new Date().toISOString().slice(0,10);
+    const nombreArchivo = `informe_sirev_${amb.tipo}_${String(amb.nombre||'nacional').replace(/[\/\\?*\[\]:]/g,'').slice(0,40)}_${fechaArchivo}.pdf`;
+    doc.save(nombreArchivo);
+  }catch(err){
+    console.error(err);
+    alert('No se pudo generar el informe: '+(err.message||err));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = 'Descargar informe PDF'; }
+  }
 }
 
 window.addEventListener('load',loadData);
