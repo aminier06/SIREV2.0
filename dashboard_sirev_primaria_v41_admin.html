@@ -2187,25 +2187,19 @@ function resumenTerritorialEvolucion(amb, periodos, perf, cov){
   };
 }
 
+function configTerritorialAmbito(amb, extraHeaders=[]){
+  if(amb.tipo==='distrito') return {headers:['Centro educativo', ...extraHeaders], indices:[2], weightsBase:[2.05, ...extraHeaders.map(()=>.9)], label:'centros educativos'};
+  if(amb.tipo==='regional') return {headers:['Distrito', ...extraHeaders], indices:[1], weightsBase:[1.65, ...extraHeaders.map(()=>.9)], label:'distritos'};
+  if(amb.tipo==='nacional') return {headers:['Regional','Distrito', ...extraHeaders], indices:[0,1], weightsBase:[1.2,1.45, ...extraHeaders.map(()=>.85)], label:'regionales con sus distritos'};
+  return null;
+}
+
 function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension){
   const dimLabel = dimension==='grado' ? 'Grado' : 'Área';
   const dimValue = r => dimension==='grado' ? gradeName[gradeOf(r)] : idText(r[9]);
-  let headers, indices, weightsBase;
-  if(amb.tipo==='distrito'){
-    headers = ['Centro educativo', dimLabel];
-    indices = [2];
-    weightsBase = [2.05, .9];
-  } else if(amb.tipo==='regional'){
-    headers = ['Distrito', dimLabel];
-    indices = [1];
-    weightsBase = [1.65, .9];
-  } else if(amb.tipo==='nacional'){
-    headers = ['Regional','Distrito', dimLabel];
-    indices = [0,1];
-    weightsBase = [1.2, 1.45, .85];
-  } else {
-    return null;
-  }
+  const cfg = configTerritorialAmbito(amb, [dimLabel]);
+  if(!cfg) return null;
+  const {headers, indices, weightsBase} = cfg;
   const sep = '||';
   const keyOf = r => [...indices.map(i=>idText(r[i])), dimValue(r)].join(sep);
   const keys = Array.from(new Set(perf.map(keyOf)))
@@ -2243,9 +2237,72 @@ function textoResumenTerritorial(amb){
 }
 
 function textoResumenTerritorialDimension(amb, dimension){
-  const base = amb.tipo==='distrito' ? 'centros educativos' : amb.tipo==='regional' ? 'distritos' : 'regionales con sus distritos';
+  const cfg = configTerritorialAmbito(amb);
+  const base = cfg ? cfg.label : 'ámbitos';
   const detalle = dimension==='grado' ? 'grado' : 'área';
   return `Esta tabla muestra los ${base} desagregados por ${detalle}. Los periodos disponibles se presentan como columnas para observar la evolución temporal con el nivel territorial que corresponde al ámbito del informe.`;
+}
+
+function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
+  const cfg = configTerritorialAmbito(amb, ['Grado']);
+  if(!cfg) return null;
+  const sep = '||';
+  const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), gradeName[gradeOf(r)]].join(sep);
+  const keys = Array.from(new Set(read.filter(r=>[1,2,3].includes(gradeOf(r))).map(keyOf)))
+    .filter(k=>k && !k.split(sep).some(x=>!x || x==='undefined'))
+    .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
+  const rows = keys.map(k=>{
+    const labels = k.split(sep);
+    const vals = periodos.flatMap(p=>{
+      const rowsRead = read.filter(r=>idText(r[6])===p && keyOf(r)===k);
+      const m = aggLevels(rowsRead, readOrder, 9, 10);
+      const total = Object.values(m).reduce((a,b)=>a+b,0);
+      if(!total) return ['—', ...readOrder.map(()=> '—')];
+      return [fmt(total), ...readOrder.map(lv=>pctf(pct(m[lv]||0,total)))];
+    });
+    return [...labels, ...vals];
+  }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
+  return {
+    headers: cfg.headers,
+    periodos,
+    subniveles: ['Eval.', ...readOrder.map(lv=>lv.replace('Lector ',''))],
+    rows,
+    weights: [...cfg.weightsBase, ...Array(periodos.length*(readOrder.length+1)).fill(.5)],
+    label: cfg.label
+  };
+}
+
+function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
+  const cfg = configTerritorialAmbito(amb, ['Área']);
+  if(!cfg) return null;
+  const sep = '||';
+  const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), idText(r[9])].join(sep);
+  const grados = orderGrade.map(g=>{
+    const rowsForGrade = perf.filter(r=>gradeOf(r)===g);
+    const keys = Array.from(new Set(rowsForGrade.map(keyOf)))
+      .filter(k=>k && !k.split(sep).some(x=>!x || x==='undefined'))
+      .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
+    const rows = keys.map(k=>{
+      const labels = k.split(sep);
+      const vals = periodos.flatMap(p=>{
+        const rowsPerf = rowsForGrade.filter(r=>idText(r[6])===p && keyOf(r)===k);
+        const m = aggLevels(rowsPerf, ['Elemental','Aceptable','Satisfactorio'], 12, 13);
+        const total = (m.Elemental||0)+(m.Aceptable||0)+(m.Satisfactorio||0);
+        if(!total) return ['—','—','—'];
+        return [pctf(pct(m.Satisfactorio,total)), pctf(pct(m.Aceptable,total)), pctf(pct(m.Elemental,total))];
+      });
+      return [...labels, ...vals];
+    }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
+    return {grado: gradeName[g], rows};
+  }).filter(g=>g.rows.length);
+  return {
+    headers: cfg.headers,
+    periodos,
+    subniveles: ['Sat.','Acep.','Elem.'],
+    grupos: grados,
+    weights: [...cfg.weightsBase, ...Array(periodos.length*3).fill(.62)],
+    label: cfg.label
+  };
 }
 
 function puntosAtencion(amb, perf, cov){
@@ -2886,33 +2943,17 @@ async function generarInformePDF(){
       }
     }
 
-    const lecturaPorGradoPeriodos = [1,2,3].map(g=>{
-      const porPeriodo = periodosDisponibles.map(p=>{
-        const rows = readX.filter(r=>idText(r[6])===p && gradeOf(r)===g);
-        const m = aggLevels(rows, readOrder, 9, 10);
-        const tot = Object.values(m).reduce((a,b)=>a+b,0);
-        return {periodo:p, niveles: readOrder.map(lv=>tot?pct(m[lv]||0,tot):0), tot};
-      }).filter(x=>x.tot>0);
-      return {grado: gradeName[g], porPeriodo};
-    }).filter(g=>g.porPeriodo.length);
-    if(lecturaPorGradoPeriodos.length){
-      titulo('Niveles de lectura por grado (primer ciclo)', 11);
-      parrafo('Aplica solo a primero, segundo y tercer grado, ya que la prueba de lectura no se administra en el segundo ciclo. Los periodos se muestran en la misma tabla, agrupados por grado, para no mezclarlos entre sí.', 9.5);
-      const filasLec = [];
-      lecturaPorGradoPeriodos.forEach(g=>{
-        g.porPeriodo.forEach((pp,i)=>filasLec.push([i===0?g.grado:'', pp.periodo, ...pp.niveles.map(pctf)]));
-      });
-      tabla(['Grado','Periodo', ...readOrder], filasLec, [0.8,0.9,1,1,1,1,1]);
-      parrafo('A continuación, un gráfico de barras (con los cinco niveles) y uno de línea (solo lector fluido, el aspecto elegido para la tendencia) para cada grado.', 9);
-      lecturaPorGradoPeriodos.forEach(g=>{
-        subtituloPeriodo(g.grado, altoEstimadoBarras(g.porPeriodo.map(pp=>pp.periodo), 95));
-        graficaBarras(g.porPeriodo.map(pp=>pp.periodo),
-          readOrder.map((lv,li)=>({nombre:lv, valores:g.porPeriodo.map(pp=>pp.niveles[li])})),
-          COLOR_LECTURA5_PDF, 95);
-        graficaLineas(g.porPeriodo.map(pp=>pp.periodo), [
-          {nombre:'Lector fluido', valores:g.porPeriodo.map(pp=>pp.niveles[4])}
-        ], [hexARgb(C.N5)], 95);
-      });
+    const lecturaTerritorial = lecturaTerritorialPorGradoEvolucion(amb, periodosDisponibles, readX);
+    if(lecturaTerritorial && lecturaTerritorial.rows.length){
+      titulo(`Niveles de lectura por ${lecturaTerritorial.label} y grado`, 11);
+      parrafo('Aplica solo a primero, segundo y tercer grado. La tabla conserva el nivel de desagregación correspondiente al ámbito del informe y presenta los periodos disponibles como columnas para observar la evolución temporal.', 9.5);
+      tablaPeriodosAgrupados(
+        lecturaTerritorial.headers,
+        lecturaTerritorial.periodos,
+        lecturaTerritorial.subniveles,
+        lecturaTerritorial.rows,
+        lecturaTerritorial.weights
+      );
     }
 
     const comparacionPeriodos = periodosDisponibles.map(p=>{
@@ -2940,98 +2981,19 @@ async function generarInformePDF(){
       })), PALETA_CATEGORICA_PDF);
     }
 
-    const gradoPeriodos = orderGrade.map(g=>{
-      const porPeriodo = periodosDisponibles.map(p=>{
-        const rows = perfX.filter(r=>idText(r[6])===p && gradeOf(r)===g);
-        const m = aggLevels(rows,['Elemental','Aceptable','Satisfactorio'],12,13);
-        const tot = (m.Elemental||0)+(m.Aceptable||0)+(m.Satisfactorio||0);
-        const pe=pct(m.Elemental,tot), ps=pct(m.Satisfactorio,tot);
-        return {periodo:p, pe, pa:pct(m.Aceptable,tot), ps, tot};
-      }).filter(x=>x.tot>0);
-      return {grado: gradeName[g], porPeriodo};
-    }).filter(g=>g.porPeriodo.length);
-    if(gradoPeriodos.length){
-      titulo('Desempeño por grado');
-      parrafo('Desagregado por grado, de primero a sexto. Todos los periodos se muestran en la misma tabla, agrupados por grado, para no sumarlos entre sí.', 9.5);
-      const filasGrado = [];
-      gradoPeriodos.forEach(g=>{
-        g.porPeriodo.forEach((pp,i)=>filasGrado.push([i===0?g.grado:'', pp.periodo, pctf(pp.ps), pctf(pp.pa), pctf(pp.pe)]));
-      });
-      tabla(['Grado','Periodo','% Satisfactorio','% Aceptable','% Elemental'], filasGrado, [1,1.1,1,1,1]);
-      parrafo('A continuación, un gráfico de barras (con los tres niveles) y uno de línea (solo Satisfactorio, el aspecto elegido para la tendencia) para cada grado.', 9);
-      gradoPeriodos.forEach(g=>{
-        subtituloPeriodo(g.grado, altoEstimadoBarras(g.porPeriodo.map(pp=>pp.periodo), 95));
-        graficaBarras(g.porPeriodo.map(pp=>pp.periodo), [
-          {nombre:'Satisfactorio', valores:g.porPeriodo.map(pp=>pp.ps)},
-          {nombre:'Aceptable', valores:g.porPeriodo.map(pp=>pp.pa)},
-          {nombre:'Elemental', valores:g.porPeriodo.map(pp=>pp.pe)}
-        ], COLOR_DESEMPENO_PDF, 95);
-        graficaLineas(g.porPeriodo.map(pp=>pp.periodo), [
-          {nombre:'Satisfactorio', valores:g.porPeriodo.map(pp=>pp.ps)}
-        ], [hexARgb(C.S)], 95);
-      });
-    }
-
-    const areaPeriodos = orderArea.map(a=>{
-      const porPeriodo = periodosDisponibles.map(p=>{
-        const rows = perfX.filter(r=>idText(r[6])===p && idText(r[9])===a);
-        const m = aggLevels(rows,['Elemental','Aceptable','Satisfactorio'],12,13);
-        const tot = (m.Elemental||0)+(m.Aceptable||0)+(m.Satisfactorio||0);
-        const pe=pct(m.Elemental,tot), ps=pct(m.Satisfactorio,tot);
-        return {periodo:p, pe, pa:pct(m.Aceptable,tot), ps, tot};
-      }).filter(x=>x.tot>0);
-      return {area:a, porPeriodo};
-    }).filter(a=>a.porPeriodo.length);
-    if(areaPeriodos.length){
-      titulo('Desempeño por área');
-      parrafo('Desagregado por área o asignatura. Todos los periodos se muestran en la misma tabla, agrupados por área, para no sumarlos entre sí.', 9.5);
-      const filasArea = [];
-      areaPeriodos.forEach(a=>{
-        a.porPeriodo.forEach((pp,i)=>filasArea.push([i===0?a.area:'', pp.periodo, pctf(pp.ps), pctf(pp.pa), pctf(pp.pe)]));
-      });
-      tabla(['Área','Periodo','% Satisfactorio','% Aceptable','% Elemental'], filasArea, [1.6,1.1,1,1,1]);
-      parrafo('A continuación, un gráfico de barras (con los tres niveles) y uno de línea (solo Satisfactorio) para cada área.', 9);
-      areaPeriodos.forEach(a=>{
-        subtituloPeriodo(a.area, altoEstimadoBarras(a.porPeriodo.map(pp=>pp.periodo), 95));
-        graficaBarras(a.porPeriodo.map(pp=>pp.periodo), [
-          {nombre:'Satisfactorio', valores:a.porPeriodo.map(pp=>pp.ps)},
-          {nombre:'Aceptable', valores:a.porPeriodo.map(pp=>pp.pa)},
-          {nombre:'Elemental', valores:a.porPeriodo.map(pp=>pp.pe)}
-        ], COLOR_DESEMPENO_PDF, 95);
-        graficaLineas(a.porPeriodo.map(pp=>pp.periodo), [
-          {nombre:'Satisfactorio', valores:a.porPeriodo.map(pp=>pp.ps)}
-        ], [hexARgb(C.S)], 95);
-      });
-    }
-
-    const gradoAreaPeriodos = orderGrade.map(g=>{
-      const areas = orderArea.map(a=>{
-        const porPeriodo = periodosDisponibles.map(p=>{
-          const rows = perfX.filter(r=>idText(r[6])===p && gradeOf(r)===g && idText(r[9])===a);
-          const m = aggLevels(rows,['Elemental','Aceptable','Satisfactorio'],12,13);
-          const tot = (m.Elemental||0)+(m.Aceptable||0)+(m.Satisfactorio||0);
-          if(!tot) return null;
-          const pe=pct(m.Elemental,tot), ps=pct(m.Satisfactorio,tot);
-          return {periodo:p, pe, pa:pct(m.Aceptable,tot), ps};
-        });
-        return {area:a, porPeriodo};
-      }).filter(a=>a.porPeriodo.some(x=>x));
-      return {grado: gradeName[g], areas};
-    }).filter(g=>g.areas.length);
-    if(gradoAreaPeriodos.length){
-      titulo('Desempeño por grado y área');
-      parrafo('Los resultados de periodos distintos no se suman entre sí, porque corresponden a momentos de evaluación diferentes. Cada fila es un área; a su derecha, los periodos disponibles aparecen uno junto al otro (Satisfactorio, Aceptable y Elemental de cada uno), para comparar de un vistazo cómo cambió cada área dentro de ese grado a lo largo del año. Una tabla por grado.', 9.5);
-      const pesosGA = [1.5, ...Array(periodosDisponibles.length*3).fill(0.62)];
-      gradoAreaPeriodos.forEach(g=>{
+    const gradoAreaTerritorial = desempenoGradoAreaTerritorialEvolucion(amb, periodosDisponibles, perfX);
+    if(gradoAreaTerritorial && gradoAreaTerritorial.grupos.length){
+      titulo(`Desempeño por grado y área según ${gradoAreaTerritorial.label}`);
+      parrafo('Los resultados de periodos distintos no se suman entre sí. Cada tabla corresponde a un grado y cada fila conserva la desagregación territorial del ámbito junto con el área evaluada; los periodos aparecen como columnas para observar la evolución.', 9.5);
+      gradoAreaTerritorial.grupos.forEach(g=>{
         subtituloPeriodo(g.grado, 100);
-        const filasGA = g.areas.map(a=>[
-          a.area,
-          ...periodosDisponibles.flatMap(p=>{
-            const x = a.porPeriodo.find(pp=>pp && pp.periodo===p);
-            return x ? [pctf(x.ps), pctf(x.pa), pctf(x.pe)] : ['—','—','—'];
-          })
-        ]);
-        tablaPeriodosAgrupados(['Área'], periodosDisponibles, ['Sat.','Acep.','Elem.'], filasGA, pesosGA);
+        tablaPeriodosAgrupados(
+          gradoAreaTerritorial.headers,
+          gradoAreaTerritorial.periodos,
+          gradoAreaTerritorial.subniveles,
+          g.rows,
+          gradoAreaTerritorial.weights
+        );
       });
     }
 
