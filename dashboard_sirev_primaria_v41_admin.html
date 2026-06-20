@@ -2191,6 +2191,23 @@ function configTerritorialAmbito(amb, extraHeaders=[]){
   if(amb.tipo==='nacional') return {headers:['Regional','Distrito', ...extraHeaders], indices:[0,1], weightsBase:[1.2,1.45, ...extraHeaders.map(()=>.85)], label:'regionales con sus distritos'};
   return null;
 }
+function compararClaveTerritorialDimension(a,b,dimension){
+  const aa = String(a).split('||'), bb = String(b).split('||');
+  const last = Math.min(aa.length,bb.length)-1;
+  for(let i=0;i<last;i++){
+    const c = String(aa[i]).localeCompare(String(bb[i]),'es',{numeric:true,sensitivity:'base'});
+    if(c) return c;
+  }
+  if(dimension==='area'){
+    const ia = orderArea.indexOf(aa[last]), ib = orderArea.indexOf(bb[last]);
+    if(ia!==ib) return (ia<0?999:ia) - (ib<0?999:ib);
+  }
+  if(dimension==='grado'){
+    const ga = parseInt(aa[last],10)||999, gb = parseInt(bb[last],10)||999;
+    if(ga!==gb) return ga-gb;
+  }
+  return String(aa[last]).localeCompare(String(bb[last]),'es',{numeric:true,sensitivity:'base'});
+}
 
 function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension){
   const dimLabel = dimension==='grado' ? 'Grado' : 'Área';
@@ -2203,7 +2220,7 @@ function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension)
   const keyOf = r => [...indices.map(i=>idText(r[i])), dimValue(r)].join(sep);
   const keys = Array.from(new Set(perf.map(keyOf)))
     .filter(k=>k && !k.split(sep).some(x=>!x || x==='undefined'))
-    .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
+    .sort((a,b)=>compararClaveTerritorialDimension(a,b,dimension));
 
   const rows = keys.map(k=>{
     const labels = k.split(sep);
@@ -2251,7 +2268,7 @@ function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
   const readShort = ['N1','N2','N3','N4','N5'];
   const keys = Array.from(new Set(read.filter(r=>[1,2,3].includes(gradeOf(r))).map(keyOf)))
     .filter(k=>k && !k.split(sep).some(x=>!x || x==='undefined'))
-    .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
+    .sort((a,b)=>compararClaveTerritorialDimension(a,b,'grado'));
   const rows = keys.map(k=>{
     const labels = k.split(sep);
     const vals = periodos.flatMap(p=>{
@@ -2282,7 +2299,7 @@ function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
     const rowsForGrade = perf.filter(r=>gradeOf(r)===g);
     const keys = Array.from(new Set(rowsForGrade.map(keyOf)))
       .filter(k=>k && !k.split(sep).some(x=>!x || x==='undefined'))
-      .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
+      .sort((a,b)=>compararClaveTerritorialDimension(a,b,'area'));
     const rows = keys.map(k=>{
       const labels = k.split(sep);
       const vals = periodos.flatMap(p=>{
@@ -2615,7 +2632,7 @@ async function generarInformePDF(){
       });
       y += 14;
     }
-    function tablaPeriodosAgrupados(headFijo, periodos, subniveles, filas, pesos, opciones={}){
+    async function tablaPeriodosAgrupados(headFijo, periodos, subniveles, filas, pesos, opciones={}){
       const usarHorizontal = !!opciones.horizontal;
       if(usarHorizontal){
         doc.addPage('a4','landscape');
@@ -2749,11 +2766,16 @@ async function generarInformePDF(){
       }
 
       dibujarEncabezados();
-      filas.forEach((fila,idx)=>{
+      for(let idx=0; idx<filas.length; idx++){
+        if(idx>0 && idx%25===0){
+          if(btn) btn.textContent = `Generando informe… ${idx}/${filas.length}`;
+          await new Promise(resolve=>setTimeout(resolve,0));
+        }
+        const fila = filas[idx];
         const alto = altoDeFilaDatos(fila);
         if(y+alto > pageH-50){ nuevaPaginaTabla(); dibujarEncabezados(); }
         dibujarFilaDatos(fila, idx);
-      });
+      }
       y += 14;
     }
 
@@ -2923,7 +2945,7 @@ async function generarInformePDF(){
     if(resumenTerritorial && resumenTerritorial.rows.length){
       titulo('Resumen territorial de resultados');
       parrafo(textoResumenTerritorial(amb), 9.5);
-      tablaPeriodosAgrupados(
+      await tablaPeriodosAgrupados(
         resumenTerritorial.headers,
         resumenTerritorial.periodos,
         resumenTerritorial.subniveles,
@@ -2938,7 +2960,7 @@ async function generarInformePDF(){
     if(resumenTerritorialGrado && resumenTerritorialGrado.rows.length){
       titulo(`Resultados de ${unidadTerritorial} por grado`);
       parrafo(textoResumenTerritorialDimension(amb, 'grado'), 9.5);
-      tablaPeriodosAgrupados(
+      await tablaPeriodosAgrupados(
         resumenTerritorialGrado.headers,
         resumenTerritorialGrado.periodos,
         resumenTerritorialGrado.subniveles,
@@ -2952,7 +2974,7 @@ async function generarInformePDF(){
     if(resumenTerritorialArea && resumenTerritorialArea.rows.length){
       titulo(`Resultados de ${unidadTerritorial} por área`);
       parrafo(textoResumenTerritorialDimension(amb, 'area'), 9.5);
-      tablaPeriodosAgrupados(
+      await tablaPeriodosAgrupados(
         resumenTerritorialArea.headers,
         resumenTerritorialArea.periodos,
         resumenTerritorialArea.subniveles,
@@ -3004,7 +3026,7 @@ async function generarInformePDF(){
     if(lecturaTerritorial && lecturaTerritorial.rows.length){
       titulo(`Niveles de lectura por ${lecturaTerritorial.label} y grado`, 11);
       parrafo('Aplica solo a primero, segundo y tercer grado. La tabla conserva el nivel de desagregación correspondiente al ámbito del informe y presenta los periodos disponibles como columnas para observar la evolución temporal.', 9.5);
-      tablaPeriodosAgrupados(
+      await tablaPeriodosAgrupados(
         lecturaTerritorial.headers,
         lecturaTerritorial.periodos,
         lecturaTerritorial.subniveles,
@@ -3044,8 +3066,8 @@ async function generarInformePDF(){
     if(gradoAreaTerritorial && gradoAreaTerritorial.grupos.length){
       titulo(`Desempeño por grado y área según ${gradoAreaTerritorial.label}`);
       parrafo('Los resultados de periodos distintos no se suman entre sí. Cada tabla corresponde a un grado y cada fila conserva la desagregación territorial del ámbito junto con el área evaluada; los periodos aparecen como columnas para observar la evolución.', 9.5);
-      gradoAreaTerritorial.grupos.forEach(g=>{
-        tablaPeriodosAgrupados(
+      for(const g of gradoAreaTerritorial.grupos){
+        await tablaPeriodosAgrupados(
           gradoAreaTerritorial.headers,
           gradoAreaTerritorial.periodos,
           gradoAreaTerritorial.subniveles,
@@ -3053,7 +3075,7 @@ async function generarInformePDF(){
           gradoAreaTerritorial.weights,
           {horizontal:true, titulo:`${g.grado} - Desempeño por área según ${gradoAreaTerritorial.label}`}
         );
-      });
+      }
     }
 
     const atencionPeriodos = periodosDisponibles.map(p=>({
