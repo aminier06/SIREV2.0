@@ -2323,6 +2323,130 @@ function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
   };
 }
 
+function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension){
+  const dimLabel = dimension==='grado' ? 'Grado' : 'Área';
+  const gradoCorto = g => g ? `${g}.º` : '';
+  const dimValue = r => dimension==='grado' ? gradoCorto(gradeOf(r)) : idText(r[9]);
+  const cfg = configTerritorialAmbito(amb, [dimLabel]);
+  if(!cfg) return null;
+  const periodSet = new Set(periodos);
+  const data = new Map();
+  const sep = '||';
+  const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), dimValue(r)].join(sep);
+
+  for(const r of perf){
+    const p = idText(r[6]);
+    if(!periodSet.has(p)) continue;
+    const k = keyOf(r);
+    if(!k || k.split(sep).some(x=>!x || x==='undefined')) continue;
+    const level = idText(r[12]);
+    const value = +r[13] || 0;
+    if(!data.has(k)) data.set(k, new Map());
+    const byPeriod = data.get(k);
+    if(!byPeriod.has(p)) byPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
+    if(level in byPeriod.get(p)) byPeriod.get(p)[level] += value;
+  }
+
+  const rows = Array.from(data.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,dimension)).map(k=>{
+    const byPeriod = data.get(k);
+    const vals = periodos.flatMap(p=>{
+      const m = byPeriod.get(p);
+      if(!m) return ['—','—','—','—'];
+      const total = m.Elemental + m.Aceptable + m.Satisfactorio;
+      if(!total) return ['—','—','—','—'];
+      const pe = pct(m.Elemental,total), pa = pct(m.Aceptable,total), ps = pct(m.Satisfactorio,total);
+      return [pctf(ps), pctf(pa), pctf(pe), breachIndex(pe,ps).toFixed(2)];
+    });
+    return [...k.split(sep), ...vals];
+  }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
+
+  return {headers:cfg.headers, periodos, subniveles:['Sat.','Acep.','Elem.','Índ.'], rows, weights:[...cfg.weightsBase, ...Array(periodos.length*4).fill(.62)]};
+}
+
+function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
+  const cfg = configTerritorialAmbito(amb, ['Grado']);
+  if(!cfg) return null;
+  const periodSet = new Set(periodos);
+  const sep = '||';
+  const gradoCorto = g => g ? `${g}.º` : '';
+  const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), gradoCorto(gradeOf(r))].join(sep);
+  const data = new Map();
+
+  for(const r of read){
+    const g = gradeOf(r);
+    if(![1,2,3].includes(g)) continue;
+    const p = idText(r[6]);
+    if(!periodSet.has(p)) continue;
+    const k = keyOf(r);
+    if(!k || k.split(sep).some(x=>!x || x==='undefined')) continue;
+    const level = idText(r[9]);
+    const value = +r[10] || 0;
+    if(!data.has(k)) data.set(k, new Map());
+    const byPeriod = data.get(k);
+    if(!byPeriod.has(p)) byPeriod.set(p, Object.fromEntries(readOrder.map(lv=>[lv,0])));
+    if(level in byPeriod.get(p)) byPeriod.get(p)[level] += value;
+  }
+
+  const rows = Array.from(data.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,'grado')).map(k=>{
+    const byPeriod = data.get(k);
+    const vals = periodos.flatMap(p=>{
+      const m = byPeriod.get(p);
+      if(!m) return readOrder.map(()=> '—');
+      const total = Object.values(m).reduce((a,b)=>a+b,0);
+      if(!total) return readOrder.map(()=> '—');
+      return readOrder.map(lv=>pctf(pct(m[lv]||0,total)));
+    });
+    return [...k.split(sep), ...vals];
+  }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
+
+  return {headers:cfg.headers, periodos, subniveles:['N1','N2','N3','N4','N5'], rows, weights:[...cfg.weightsBase, ...Array(periodos.length*readOrder.length).fill(.5)], label:cfg.label};
+}
+
+function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
+  const cfg = configTerritorialAmbito(amb, ['Área']);
+  if(!cfg) return null;
+  const periodSet = new Set(periodos);
+  const sep = '||';
+  const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), idText(r[9])].join(sep);
+  const byGrade = new Map();
+
+  for(const r of perf){
+    const g = gradeOf(r);
+    if(!g) continue;
+    const p = idText(r[6]);
+    if(!periodSet.has(p)) continue;
+    const k = keyOf(r);
+    if(!k || k.split(sep).some(x=>!x || x==='undefined')) continue;
+    const level = idText(r[12]);
+    const value = +r[13] || 0;
+    if(!byGrade.has(g)) byGrade.set(g, new Map());
+    const byKey = byGrade.get(g);
+    if(!byKey.has(k)) byKey.set(k, new Map());
+    const byPeriod = byKey.get(k);
+    if(!byPeriod.has(p)) byPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
+    if(level in byPeriod.get(p)) byPeriod.get(p)[level] += value;
+  }
+
+  const grupos = orderGrade.map(g=>{
+    const byKey = byGrade.get(g);
+    if(!byKey) return {grado:`${g}.º`, rows:[]};
+    const rows = Array.from(byKey.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,'area')).map(k=>{
+      const byPeriod = byKey.get(k);
+      const vals = periodos.flatMap(p=>{
+        const m = byPeriod.get(p);
+        if(!m) return ['—','—','—'];
+        const total = m.Elemental + m.Aceptable + m.Satisfactorio;
+        if(!total) return ['—','—','—'];
+        return [pctf(pct(m.Satisfactorio,total)), pctf(pct(m.Aceptable,total)), pctf(pct(m.Elemental,total))];
+      });
+      return [...k.split(sep), ...vals];
+    }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
+    return {grado:`${g}.º`, rows};
+  }).filter(g=>g.rows.length);
+
+  return {headers:cfg.headers, periodos, subniveles:['Sat.','Acep.','Elem.'], grupos, weights:[...cfg.weightsBase, ...Array(periodos.length*3).fill(.62)], label:cfg.label};
+}
+
 function puntosAtencion(amb, perf, cov){
   let idx, label;
   if(amb.tipo==='nacional'){ idx=0; label='Regional'; }
