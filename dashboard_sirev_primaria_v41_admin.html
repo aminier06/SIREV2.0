@@ -2142,15 +2142,15 @@ function resumenTerritorialEvolucion(amb, periodos, perf, cov){
   if(amb.tipo==='distrito'){
     headers = ['Centro educativo'];
     indices = [2];
-    weights = [2.3, ...Array(periodos.length*5).fill(.58)];
+    weights = [2.3, ...Array(periodos.length*4).fill(.62)];
   } else if(amb.tipo==='regional'){
     headers = ['Distrito'];
     indices = [1];
-    weights = [1.75, ...Array(periodos.length*5).fill(.58)];
+    weights = [1.75, ...Array(periodos.length*4).fill(.62)];
   } else if(amb.tipo==='nacional'){
     headers = ['Regional','Distrito'];
     indices = [0,1];
-    weights = [1.25, 1.45, ...Array(periodos.length*5).fill(.54)];
+    weights = [1.25, 1.45, ...Array(periodos.length*4).fill(.58)];
   } else {
     return null;
   }
@@ -2166,14 +2166,12 @@ function resumenTerritorialEvolucion(amb, periodos, perf, cov){
     const labels = labelOf(k);
     const vals = periodos.flatMap(p=>{
       const perfRows = perf.filter(r=>idText(r[6])===p && keyOf(r)===k);
-      const covRows = cov.filter(r=>idText(r[6])===p && keyOf(r)===k);
-      const ev = covRows.reduce((a,r)=>a+(r[10]||0),0);
       const m = aggLevels(perfRows, ['Elemental','Aceptable','Satisfactorio'], 12, 13);
       const total = (m.Elemental||0) + (m.Aceptable||0) + (m.Satisfactorio||0);
-      if(!ev && !total) return ['—','—','—','—','—'];
+      if(!total) return ['—','—','—','—'];
       const pe = pct(m.Elemental,total), pa = pct(m.Aceptable,total), ps = pct(m.Satisfactorio,total);
       const idxB = total ? breachIndex(pe,ps) : null;
-      return [fmt(ev), pctf(ps), pctf(pa), pctf(pe), idxB==null?'—':idxB.toFixed(2)];
+      return [pctf(ps), pctf(pa), pctf(pe), idxB==null?'—':idxB.toFixed(2)];
     });
     return [...labels, ...vals];
   }).filter(r=>r.slice(headers.length).some(v=>v!=='—'));
@@ -2181,7 +2179,7 @@ function resumenTerritorialEvolucion(amb, periodos, perf, cov){
   return {
     headers,
     periodos,
-    subniveles: ['Eval.','Sat.','Acep.','Elem.','Índ.'],
+    subniveles: ['Sat.','Acep.','Elem.','Índ.'],
     rows,
     weights
   };
@@ -2196,7 +2194,8 @@ function configTerritorialAmbito(amb, extraHeaders=[]){
 
 function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension){
   const dimLabel = dimension==='grado' ? 'Grado' : 'Área';
-  const dimValue = r => dimension==='grado' ? gradeName[gradeOf(r)] : idText(r[9]);
+  const gradoCorto = g => g ? `${g}.º` : '';
+  const dimValue = r => dimension==='grado' ? gradoCorto(gradeOf(r)) : idText(r[9]);
   const cfg = configTerritorialAmbito(amb, [dimLabel]);
   if(!cfg) return null;
   const {headers, indices, weightsBase} = cfg;
@@ -2212,10 +2211,10 @@ function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension)
       const rowsPerf = perf.filter(r=>idText(r[6])===p && keyOf(r)===k);
       const m = aggLevels(rowsPerf, ['Elemental','Aceptable','Satisfactorio'], 12, 13);
       const total = (m.Elemental||0) + (m.Aceptable||0) + (m.Satisfactorio||0);
-      if(!total) return ['—','—','—','—','—'];
+      if(!total) return ['—','—','—','—'];
       const pe = pct(m.Elemental,total), pa = pct(m.Aceptable,total), ps = pct(m.Satisfactorio,total);
       const idxB = breachIndex(pe,ps);
-      return [fmt(total), pctf(ps), pctf(pa), pctf(pe), idxB.toFixed(2)];
+      return [pctf(ps), pctf(pa), pctf(pe), idxB.toFixed(2)];
     });
     return [...labels, ...vals];
   }).filter(r=>r.slice(headers.length).some(v=>v!=='—'));
@@ -2223,9 +2222,9 @@ function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension)
   return {
     headers,
     periodos,
-    subniveles: ['Eval.','Sat.','Acep.','Elem.','Índ.'],
+    subniveles: ['Sat.','Acep.','Elem.','Índ.'],
     rows,
-    weights: [...weightsBase, ...Array(periodos.length*5).fill(.55)]
+    weights: [...weightsBase, ...Array(periodos.length*4).fill(.62)]
   };
 }
 
@@ -2247,7 +2246,9 @@ function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
   const cfg = configTerritorialAmbito(amb, ['Grado']);
   if(!cfg) return null;
   const sep = '||';
-  const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), gradeName[gradeOf(r)]].join(sep);
+  const gradoCorto = g => g ? `${g}.º` : '';
+  const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), gradoCorto(gradeOf(r))].join(sep);
+  const readShort = ['Pre','Sil','Sil-alf','Alf','Flu'];
   const keys = Array.from(new Set(read.filter(r=>[1,2,3].includes(gradeOf(r))).map(keyOf)))
     .filter(k=>k && !k.split(sep).some(x=>!x || x==='undefined'))
     .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}));
@@ -2257,17 +2258,17 @@ function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
       const rowsRead = read.filter(r=>idText(r[6])===p && keyOf(r)===k);
       const m = aggLevels(rowsRead, readOrder, 9, 10);
       const total = Object.values(m).reduce((a,b)=>a+b,0);
-      if(!total) return ['—', ...readOrder.map(()=> '—')];
-      return [fmt(total), ...readOrder.map(lv=>pctf(pct(m[lv]||0,total)))];
+      if(!total) return readOrder.map(()=> '—');
+      return readOrder.map(lv=>pctf(pct(m[lv]||0,total)));
     });
     return [...labels, ...vals];
   }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
   return {
     headers: cfg.headers,
     periodos,
-    subniveles: ['Eval.', ...readOrder.map(lv=>lv.replace('Lector ',''))],
+    subniveles: readShort,
     rows,
-    weights: [...cfg.weightsBase, ...Array(periodos.length*(readOrder.length+1)).fill(.5)],
+    weights: [...cfg.weightsBase, ...Array(periodos.length*readOrder.length).fill(.5)],
     label: cfg.label
   };
 }
@@ -2293,7 +2294,7 @@ function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
       });
       return [...labels, ...vals];
     }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
-    return {grado: gradeName[g], rows};
+    return {grado: `${g}.º`, rows};
   }).filter(g=>g.rows.length);
   return {
     headers: cfg.headers,
@@ -2474,12 +2475,14 @@ async function generarInformePDF(){
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({unit:'pt', format:'a4'});
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
+    let pageW = doc.internal.pageSize.getWidth();
+    let pageH = doc.internal.pageSize.getHeight();
     const marginX = 42;
     let y = 0;
 
     function dibujarEncabezado(){
+      pageW = doc.internal.pageSize.getWidth();
+      pageH = doc.internal.pageSize.getHeight();
       doc.setFillColor(0,59,113);
       doc.rect(0,0,pageW,64,'F');
       let textX = marginX;
@@ -2580,7 +2583,17 @@ async function generarInformePDF(){
       });
       y += 14;
     }
-    function tablaPeriodosAgrupados(headFijo, periodos, subniveles, filas, pesos){
+    function tablaPeriodosAgrupados(headFijo, periodos, subniveles, filas, pesos, opciones={}){
+      const usarHorizontal = !!opciones.horizontal;
+      if(usarHorizontal){
+        doc.addPage('a4','landscape');
+        dibujarEncabezado();
+        if(opciones.titulo){
+          doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(0,59,113);
+          doc.text(String(opciones.titulo), marginX, y); y += 13;
+          doc.setTextColor(20,35,63);
+        }
+      }
       const anchoTotal = pageW - marginX*2;
       const nCols = headFijo.length + periodos.length*subniveles.length;
       const p = pesos || Array(nCols).fill(1);
@@ -2704,6 +2717,10 @@ async function generarInformePDF(){
         dibujarFilaDatos(fila, idx);
       });
       y += 14;
+      if(usarHorizontal){
+        doc.addPage('a4','portrait');
+        dibujarEncabezado();
+      }
     }
 
     function graficaBarras(categorias, series, colores, altoPersonalizado){
@@ -2874,7 +2891,8 @@ async function generarInformePDF(){
         resumenTerritorial.periodos,
         resumenTerritorial.subniveles,
         resumenTerritorial.rows,
-        resumenTerritorial.weights
+        resumenTerritorial.weights,
+        {horizontal:true, titulo:'Resumen territorial de resultados'}
       );
     }
 
@@ -2888,7 +2906,8 @@ async function generarInformePDF(){
         resumenTerritorialGrado.periodos,
         resumenTerritorialGrado.subniveles,
         resumenTerritorialGrado.rows,
-        resumenTerritorialGrado.weights
+        resumenTerritorialGrado.weights,
+        {horizontal:true, titulo:`Resultados de ${unidadTerritorial} por grado`}
       );
     }
 
@@ -2901,7 +2920,8 @@ async function generarInformePDF(){
         resumenTerritorialArea.periodos,
         resumenTerritorialArea.subniveles,
         resumenTerritorialArea.rows,
-        resumenTerritorialArea.weights
+        resumenTerritorialArea.weights,
+        {horizontal:true, titulo:`Resultados de ${unidadTerritorial} por área`}
       );
     }
 
@@ -2952,7 +2972,8 @@ async function generarInformePDF(){
         lecturaTerritorial.periodos,
         lecturaTerritorial.subniveles,
         lecturaTerritorial.rows,
-        lecturaTerritorial.weights
+        lecturaTerritorial.weights,
+        {horizontal:true, titulo:`Niveles de lectura por ${lecturaTerritorial.label} y grado`}
       );
     }
 
@@ -2986,13 +3007,13 @@ async function generarInformePDF(){
       titulo(`Desempeño por grado y área según ${gradoAreaTerritorial.label}`);
       parrafo('Los resultados de periodos distintos no se suman entre sí. Cada tabla corresponde a un grado y cada fila conserva la desagregación territorial del ámbito junto con el área evaluada; los periodos aparecen como columnas para observar la evolución.', 9.5);
       gradoAreaTerritorial.grupos.forEach(g=>{
-        subtituloPeriodo(g.grado, 100);
         tablaPeriodosAgrupados(
           gradoAreaTerritorial.headers,
           gradoAreaTerritorial.periodos,
           gradoAreaTerritorial.subniveles,
           g.rows,
-          gradoAreaTerritorial.weights
+          gradoAreaTerritorial.weights,
+          {horizontal:true, titulo:`${g.grado} - Desempeño por área según ${gradoAreaTerritorial.label}`}
         );
       });
     }
