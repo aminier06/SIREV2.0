@@ -2084,29 +2084,14 @@ function breachRowsFromData(perf, cov, idx, label){
   }).sort((a,b)=>b.idxB-a.idxB);
 }
 
-function resumenTerritorial(amb, perf, cov){
-  if(amb.tipo==='distrito'){
-    const rows = breachRowsFromData(perf, cov, 2, 'Centro educativo').filter(r=>r.ev>0);
-    if(!rows.length) return null;
-    return {tipo:'plano', label:'Centro educativo', rows};
-  }
-  if(amb.tipo==='regional'){
-    const rows = breachRowsFromData(perf, cov, 1, 'Distrito').filter(r=>r.ev>0);
-    if(!rows.length) return null;
-    return {tipo:'plano', label:'Distrito', rows};
-  }
-  if(amb.tipo==='nacional'){
-    const regionales = breachRowsFromData(perf, cov, 0, 'Regional').filter(r=>r.ev>0);
-    if(!regionales.length) return null;
-    const grupos = regionales.map(reg=>{
-      const perfReg = perf.filter(r=>idText(r[0])===reg.k);
-      const covReg = cov.filter(r=>idText(r[0])===reg.k);
-      const distritos = breachRowsFromData(perfReg, covReg, 1, 'Distrito').filter(d=>d.ev>0);
-      return {regional: reg, distritos};
-    });
-    return {tipo:'anidado', grupos};
-  }
-  return null;
+function puntosAtencion(amb, perf, cov){
+  let idx, label;
+  if(amb.tipo==='nacional'){ idx=0; label='Regional'; }
+  else if(amb.tipo==='regional'){ idx=1; label='Distrito'; }
+  else if(amb.tipo==='distrito'){ idx=2; label='Centro educativo'; }
+  else return null;
+  const rows = breachRowsFromData(perf, cov, idx, label).filter(r=>r.ev>0);
+  return {label, rows: rows.slice(0,5)};
 }
 
 function desempenoPorArea(f, perf){
@@ -2818,42 +2803,37 @@ async function generarInformePDF(){
       });
     }
 
-    const resumenPorPeriodo = periodosDisponibles.map(p=>({
-      periodo: p,
-      datos: resumenTerritorial(amb, perfX.filter(r=>idText(r[6])===p), covX.filter(r=>idText(r[6])===p))
-    })).filter(x=>x.datos);
-
-    if(resumenPorPeriodo.length){
-      const tipoResumen = resumenPorPeriodo[0].datos.tipo;
-
-      if(tipoResumen==='plano'){
-        const labelResumen = resumenPorPeriodo[0].datos.label;
-        titulo(`Resumen de resultados por ${labelResumen.toLowerCase()}`);
-        parrafo(`A continuación, todos los ${labelResumen.toLowerCase()}s de este ámbito, ordenados de mayor a menor índice de priorización (es decir, de los que requieren más atención a los que menos). Todos los periodos se muestran en la misma tabla, agrupados por periodo.`, 9.5);
-        const filasResumen = [];
-        resumenPorPeriodo.forEach(({periodo, datos})=>{
-          datos.rows.forEach((r,i)=>filasResumen.push([i===0?periodo:'', i+1, r.k, fmt(r.ev), r.idxB.toFixed(2), pctf(r.ps), r.estado]));
-        });
-        tabla(['Periodo','#',labelResumen,'Evaluados','Índice','% Satisfactorio','Estado'], filasResumen, [0.9,0.35,2,0.8,0.7,1,1.3]);
-      } else if(tipoResumen==='anidado'){
-        titulo('Resumen de resultados por regional y distrito');
-        parrafo('Para cada regional se presenta primero su propio resultado, y justo debajo, el de cada uno de sus distritos. Las regionales aparecen ordenadas de mayor a menor índice de priorización; sus distritos, igual. Todos los periodos se muestran en la misma tabla, agrupados por periodo.', 9.5);
-        const filasNac = [];
-        resumenPorPeriodo.forEach(({periodo, datos})=>{
-          let primeraFilaPeriodo = true;
-          datos.grupos.forEach(({regional, distritos})=>{
-            filasNac.push([
-              primeraFilaPeriodo ? periodo : '', regional.k, '',
-              fmt(regional.ev), regional.idxB.toFixed(2), pctf(regional.ps), regional.estado
-            ]);
-            primeraFilaPeriodo = false;
-            distritos.forEach(d=>{
-              filasNac.push(['', '', d.k, fmt(d.ev), d.idxB.toFixed(2), pctf(d.ps), d.estado]);
-            });
-          });
-        });
-        tabla(['Periodo','Regional','Distrito','Evaluados','Índice','% Satisfactorio','Estado'], filasNac, [0.85,1.3,1.3,0.8,0.7,1,1.3]);
+    const atencionPeriodos = periodosDisponibles.map(p=>{
+      const datos = puntosAtencion(amb, perfX.filter(r=>idText(r[6])===p), covX.filter(r=>idText(r[6])===p));
+      let filaPropia = null;
+      if(datos && amb.tipo==='regional'){
+        const stP = scopeStats({...fExport, periods:[p]});
+        if(stP.perf.total){
+          filaPropia = {nombre:`Regional ${amb.nombre} (resumen propio)`, ev:stP.cov.ev, idxB:(stP.idxB!=null?stP.idxB:0), ps:stP.perf.ps, estado:(stP.st?stP.st[1]:'—')};
+        }
       }
+      return {periodo:p, datos, filaPropia};
+    }).filter(x=>x.datos && x.datos.rows.length);
+
+    if(atencionPeriodos.length){
+      const labelAtencion = atencionPeriodos[0].datos.label;
+      titulo(`Puntos de atención por ${labelAtencion.toLowerCase()}`);
+      let textoIntro = `Estos son los ${labelAtencion.toLowerCase()}s con mayor índice de priorización en cada periodo, es decir, los que requirieron atención más urgente según los datos de ese momento. El orden puede cambiar de un periodo a otro; todos los periodos se muestran en la misma tabla, agrupados por periodo.`;
+      if(amb.tipo==='regional') textoIntro += ' Antes de los distritos, se muestra el resultado propio de la Regional para ese mismo periodo, como referencia.';
+      parrafo(textoIntro, 9.5);
+      const filasAtencion = [];
+      atencionPeriodos.forEach(({periodo, datos, filaPropia})=>{
+        let primera = true;
+        if(filaPropia){
+          filasAtencion.push([periodo, '—', filaPropia.nombre, fmt(filaPropia.ev), filaPropia.idxB.toFixed(2), pctf(filaPropia.ps), filaPropia.estado]);
+          primera = false;
+        }
+        datos.rows.forEach((r,i)=>{
+          filasAtencion.push([primera?periodo:'', i+1, r.k, fmt(r.ev), r.idxB.toFixed(2), pctf(r.ps), r.estado]);
+          primera = false;
+        });
+      });
+      tabla(['Periodo','#',labelAtencion,'Evaluados','Índice','% Satisfactorio','Estado'], filasAtencion, [0.9,0.35,2,0.8,0.7,1,1.3]);
     }
 
 
