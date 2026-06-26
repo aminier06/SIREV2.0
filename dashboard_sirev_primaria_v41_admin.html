@@ -2143,6 +2143,7 @@ function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension)
   const periodSet = new Set(periodos);
   const data = new Map();
   const nacional = new Map();
+  const porRegional = new Map(); // agregados por Regional + dimensión, para el resumen previo a sus distritos
   const sep = '||';
   const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), dimValue(r)].join(sep);
 
@@ -2164,9 +2165,19 @@ function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension)
       if(!nByPeriod.has(p)) nByPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
       agregarNivel(nByPeriod.get(p), level, value);
     }
+    if(amb.tipo==='nacional' && nk && nk!=='undefined'){
+      const reg = idText(r[0]);
+      if(reg){
+        const rk = reg+sep+nk;
+        if(!porRegional.has(rk)) porRegional.set(rk, new Map());
+        const rByPeriod = porRegional.get(rk);
+        if(!rByPeriod.has(p)) rByPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
+        agregarNivel(rByPeriod.get(p), level, value);
+      }
+    }
   }
 
-  const rows = Array.from(data.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,dimension)).map(k=>{
+  const filasOrdenadas = Array.from(data.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,dimension)).map(k=>{
     const byPeriod = data.get(k);
     const vals = periodos.flatMap(p=>{
       const m = byPeriod.get(p);
@@ -2178,7 +2189,27 @@ function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension)
     });
     return [...k.split(sep), ...vals];
   }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
+
+  let rows;
   if(amb.tipo==='nacional'){
+    rows = [];
+    let regionalActual = null;
+    filasOrdenadas.forEach(fila=>{
+      const reg = fila[0]; // headers = ['Regional','Distrito',dimLabel]
+      if(reg !== regionalActual){
+        regionalActual = reg;
+        const dimsDeEstaRegional = Array.from(new Set(filasOrdenadas.filter(f=>f[0]===reg).map(f=>f[2])));
+        dimsDeEstaRegional.sort((a,b)=>{
+          if(dimension==='area'){ const ia=orderArea.indexOf(a), ib=orderArea.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib); }
+          return (parseInt(a,10)||999)-(parseInt(b,10)||999);
+        });
+        dimsDeEstaRegional.forEach(dv=>{
+          const rByPeriod = porRegional.get(reg+sep+dv);
+          rows.push([reg, '(Resumen regional)', dv, ...periodos.flatMap(p=>valoresDesempenoDesdeAgg((rByPeriod&&rByPeriod.get(p))||{}))]);
+        });
+      }
+      rows.push(fila);
+    });
     const nRows = Array.from(nacional.keys()).sort((a,b)=>{
       if(dimension==='area'){
         const ia=orderArea.indexOf(a), ib=orderArea.indexOf(b);
@@ -2187,6 +2218,8 @@ function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension)
       return (parseInt(a,10)||999)-(parseInt(b,10)||999);
     }).map(k=>['Nacional','Nacional', k, ...periodos.flatMap(p=>valoresDesempenoDesdeAgg(nacional.get(k).get(p)||{}))]);
     rows.unshift(...nRows);
+  } else {
+    rows = filasOrdenadas;
   }
 
   return {headers:cfg.headers, periodos, subniveles:['Sat.','Acep.','Elem.','Índ.'], rows, weights:[...cfg.weightsBase, ...Array(periodos.length*4).fill(.62)]};
@@ -2201,6 +2234,7 @@ function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
   const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), gradoCorto(gradeOf(r))].join(sep);
   const data = new Map();
   const nacional = new Map();
+  const porRegional = new Map();
 
   for(const r of read){
     const g = gradeOf(r);
@@ -2220,9 +2254,19 @@ function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
     const nByPeriod = nacional.get(nk);
     if(!nByPeriod.has(p)) nByPeriod.set(p, Object.fromEntries(readOrder.map(lv=>[lv,0])));
     if(level in nByPeriod.get(p)) nByPeriod.get(p)[level] += value;
+    if(amb.tipo==='nacional'){
+      const reg = idText(r[0]);
+      if(reg){
+        const rk = reg+sep+nk;
+        if(!porRegional.has(rk)) porRegional.set(rk, new Map());
+        const rByPeriod = porRegional.get(rk);
+        if(!rByPeriod.has(p)) rByPeriod.set(p, Object.fromEntries(readOrder.map(lv=>[lv,0])));
+        if(level in rByPeriod.get(p)) rByPeriod.get(p)[level] += value;
+      }
+    }
   }
 
-  const rows = Array.from(data.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,'grado')).map(k=>{
+  const filasOrdenadas = Array.from(data.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,'grado')).map(k=>{
     const byPeriod = data.get(k);
     const vals = periodos.flatMap(p=>{
       const m = byPeriod.get(p);
@@ -2233,19 +2277,39 @@ function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
     });
     return [...k.split(sep), ...vals];
   }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
+
+  function valoresLectura(m){
+    if(!m) return readOrder.map(()=> '—');
+    const total = Object.values(m).reduce((a,b)=>a+b,0);
+    if(!total) return readOrder.map(()=> '—');
+    return readOrder.map(lv=>pctf(pct(m[lv]||0,total)));
+  }
+
+  let rows;
   if(amb.tipo==='nacional'){
+    rows = [];
+    let regionalActual = null;
+    filasOrdenadas.forEach(fila=>{
+      const reg = fila[0];
+      if(reg !== regionalActual){
+        regionalActual = reg;
+        const gradosDeEstaRegional = Array.from(new Set(filasOrdenadas.filter(f=>f[0]===reg).map(f=>f[2])))
+          .sort((a,b)=>(parseInt(a,10)||999)-(parseInt(b,10)||999));
+        gradosDeEstaRegional.forEach(gv=>{
+          const rByPeriod = porRegional.get(reg+sep+gv);
+          rows.push([reg, '(Resumen regional)', gv, ...periodos.flatMap(p=>valoresLectura(rByPeriod&&rByPeriod.get(p)))]);
+        });
+      }
+      rows.push(fila);
+    });
     const nRows = Array.from(nacional.keys()).sort((a,b)=>(parseInt(a,10)||999)-(parseInt(b,10)||999)).map(k=>{
       const byPeriod = nacional.get(k);
-      const vals = periodos.flatMap(p=>{
-        const m = byPeriod.get(p);
-        if(!m) return readOrder.map(()=> '—');
-        const total = Object.values(m).reduce((a,b)=>a+b,0);
-        if(!total) return readOrder.map(()=> '—');
-        return readOrder.map(lv=>pctf(pct(m[lv]||0,total)));
-      });
+      const vals = periodos.flatMap(p=>valoresLectura(byPeriod.get(p)));
       return ['Nacional','Nacional', k, ...vals];
     });
     rows.unshift(...nRows);
+  } else {
+    rows = filasOrdenadas;
   }
 
   return {headers:cfg.headers, periodos, subniveles:['N1','N2','N3','N4','N5'], rows, weights:[...cfg.weightsBase, ...Array(periodos.length*readOrder.length).fill(.5)], label:cfg.label};
@@ -2259,6 +2323,7 @@ function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
   const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), idText(r[9])].join(sep);
   const byGrade = new Map();
   const nacionalByGrade = new Map();
+  const porRegionalByGrade = new Map(); // grado -> "Regional||Área" -> periodo -> niveles
 
   for(const r of perf){
     const g = gradeOf(r);
@@ -2283,7 +2348,26 @@ function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
       const nByPeriod = byArea.get(area);
       if(!nByPeriod.has(p)) nByPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
       agregarNivel(nByPeriod.get(p), level, value);
+      if(amb.tipo==='nacional'){
+        const reg = idText(r[0]);
+        if(reg){
+          if(!porRegionalByGrade.has(g)) porRegionalByGrade.set(g, new Map());
+          const byKeyReg = porRegionalByGrade.get(g);
+          const rk = reg+sep+area;
+          if(!byKeyReg.has(rk)) byKeyReg.set(rk, new Map());
+          const rByPeriod = byKeyReg.get(rk);
+          if(!rByPeriod.has(p)) rByPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
+          agregarNivel(rByPeriod.get(p), level, value);
+        }
+      }
     }
+  }
+
+  function valoresPerf(m){
+    if(!m) return ['—','—','—'];
+    const total = m.Elemental + m.Aceptable + m.Satisfactorio;
+    if(!total) return ['—','—','—'];
+    return [pctf(pct(m.Satisfactorio,total)), pctf(pct(m.Aceptable,total)), pctf(pct(m.Elemental,total))];
   }
 
   const grupos = orderGrade.map(g=>{
@@ -2294,31 +2378,37 @@ function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
       const nRows = Array.from(nByArea.keys()).sort((a,b)=>{
         const ia=orderArea.indexOf(a), ib=orderArea.indexOf(b);
         return (ia<0?999:ia)-(ib<0?999:ib);
-      }).map(area=>{
-        const byPeriod = nByArea.get(area);
-        const vals = periodos.flatMap(p=>{
-          const m = byPeriod.get(p);
-          if(!m) return ['—','—','—'];
-          const total = m.Elemental + m.Aceptable + m.Satisfactorio;
-          if(!total) return ['—','—','—'];
-          return [pctf(pct(m.Satisfactorio,total)), pctf(pct(m.Aceptable,total)), pctf(pct(m.Elemental,total))];
-        });
-        return ['Nacional','Nacional', area, ...vals];
-      });
+      }).map(area=>['Nacional','Nacional', area, ...periodos.flatMap(p=>valoresPerf(nByArea.get(area).get(p)))]);
       rows.push(...nRows);
     }
     if(!byKey) return {grado:`${g}.º`, rows};
-    rows.push(...Array.from(byKey.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,'area')).map(k=>{
+
+    const filasOrdenadas = Array.from(byKey.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,'area')).map(k=>{
       const byPeriod = byKey.get(k);
-      const vals = periodos.flatMap(p=>{
-        const m = byPeriod.get(p);
-        if(!m) return ['—','—','—'];
-        const total = m.Elemental + m.Aceptable + m.Satisfactorio;
-        if(!total) return ['—','—','—'];
-        return [pctf(pct(m.Satisfactorio,total)), pctf(pct(m.Aceptable,total)), pctf(pct(m.Elemental,total))];
-      });
+      const vals = periodos.flatMap(p=>valoresPerf(byPeriod.get(p)));
       return [...k.split(sep), ...vals];
-    }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—')));
+    }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
+
+    if(amb.tipo==='nacional'){
+      const byKeyReg = porRegionalByGrade.get(g);
+      let regionalActual = null;
+      filasOrdenadas.forEach(fila=>{
+        const reg = fila[0];
+        if(reg !== regionalActual){
+          regionalActual = reg;
+          const areasDeEstaRegional = Array.from(new Set(filasOrdenadas.filter(f=>f[0]===reg).map(f=>f[2])))
+            .sort((a,b)=>{ const ia=orderArea.indexOf(a), ib=orderArea.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib); });
+          areasDeEstaRegional.forEach(area=>{
+            const rByPeriod = byKeyReg && byKeyReg.get(reg+sep+area);
+            rows.push([reg, '(Resumen regional)', area, ...periodos.flatMap(p=>valoresPerf(rByPeriod&&rByPeriod.get(p)))]);
+          });
+        }
+        rows.push(fila);
+      });
+    } else {
+      rows.push(...filasOrdenadas);
+    }
+
     return {grado:`${g}.º`, rows};
   }).filter(g=>g.rows.length);
 
