@@ -2119,111 +2119,6 @@ function agregarNivel(m, level, value){
 }
 
 
-function textoResumenTerritorial(amb){
-  if(amb.tipo==='distrito') return 'El informe distrital incluye el resumen de resultados de sus centros educativos. Los periodos disponibles aparecen como columnas para observar la evolución temporal de cada centro.';
-  if(amb.tipo==='regional') return 'El informe regional incluye el resumen de resultados de sus distritos. Los periodos disponibles aparecen como columnas para comparar la evolución temporal de cada distrito.';
-  if(amb.tipo==='nacional') return 'El informe Nacional incluye el resumen de las regionales con sus distritos. Los periodos disponibles aparecen como columnas para observar la evolución territorial completa.';
-  return '';
-}
-
-function textoResumenTerritorialDimension(amb, dimension){
-  const cfg = configTerritorialAmbito(amb);
-  const base = cfg ? cfg.label : 'ámbitos';
-  const detalle = dimension==='grado' ? 'grado' : 'área';
-  return `Esta tabla muestra los ${base} desagregados por ${detalle}. Los periodos disponibles se presentan como columnas para observar la evolución temporal con el nivel territorial que corresponde al ámbito del informe.`;
-}
-
-
-function resumenTerritorialPorDimensionEvolucion(amb, periodos, perf, dimension){
-  const dimLabel = dimension==='grado' ? 'Grado' : 'Área';
-  const gradoCorto = g => g ? `${g}.º` : '';
-  const dimValue = r => dimension==='grado' ? gradoCorto(gradeOf(r)) : idText(r[9]);
-  const cfg = configTerritorialAmbito(amb, [dimLabel]);
-  if(!cfg) return null;
-  const periodSet = new Set(periodos);
-  const data = new Map();
-  const nacional = new Map();
-  const porRegional = new Map(); // agregados por Regional + dimensión, para el resumen previo a sus distritos
-  const sep = '||';
-  const keyOf = r => [...cfg.indices.map(i=>idText(r[i])), dimValue(r)].join(sep);
-
-  for(const r of perf){
-    const p = idText(r[6]);
-    if(!periodSet.has(p)) continue;
-    const k = keyOf(r);
-    if(!k || k.split(sep).some(x=>!x || x==='undefined')) continue;
-    const level = idText(r[12]);
-    const value = +r[13] || 0;
-    if(!data.has(k)) data.set(k, new Map());
-    const byPeriod = data.get(k);
-    if(!byPeriod.has(p)) byPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
-    if(level in byPeriod.get(p)) byPeriod.get(p)[level] += value;
-    const nk = dimValue(r);
-    if(nk && nk!=='undefined'){
-      if(!nacional.has(nk)) nacional.set(nk, new Map());
-      const nByPeriod = nacional.get(nk);
-      if(!nByPeriod.has(p)) nByPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
-      agregarNivel(nByPeriod.get(p), level, value);
-    }
-    if(amb.tipo==='nacional' && nk && nk!=='undefined'){
-      const reg = idText(r[0]);
-      if(reg){
-        const rk = reg+sep+nk;
-        if(!porRegional.has(rk)) porRegional.set(rk, new Map());
-        const rByPeriod = porRegional.get(rk);
-        if(!rByPeriod.has(p)) rByPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
-        agregarNivel(rByPeriod.get(p), level, value);
-      }
-    }
-  }
-
-  const filasOrdenadas = Array.from(data.keys()).sort((a,b)=>compararClaveTerritorialDimension(a,b,dimension)).map(k=>{
-    const byPeriod = data.get(k);
-    const vals = periodos.flatMap(p=>{
-      const m = byPeriod.get(p);
-      if(!m) return ['—','—','—','—'];
-      const total = m.Elemental + m.Aceptable + m.Satisfactorio;
-      if(!total) return ['—','—','—','—'];
-      const pe = pct(m.Elemental,total), pa = pct(m.Aceptable,total), ps = pct(m.Satisfactorio,total);
-      return [pctf(ps), pctf(pa), pctf(pe), breachIndex(pe,ps).toFixed(2)];
-    });
-    return [...k.split(sep), ...vals];
-  }).filter(r=>r.slice(cfg.headers.length).some(v=>v!=='—'));
-
-  let rows;
-  if(amb.tipo==='nacional'){
-    rows = [];
-    let regionalActual = null;
-    filasOrdenadas.forEach(fila=>{
-      const reg = fila[0]; // headers = ['Regional','Distrito',dimLabel]
-      if(reg !== regionalActual){
-        regionalActual = reg;
-        const dimsDeEstaRegional = Array.from(new Set(filasOrdenadas.filter(f=>f[0]===reg).map(f=>f[2])));
-        dimsDeEstaRegional.sort((a,b)=>{
-          if(dimension==='area'){ const ia=orderArea.indexOf(a), ib=orderArea.indexOf(b); return (ia<0?999:ia)-(ib<0?999:ib); }
-          return (parseInt(a,10)||999)-(parseInt(b,10)||999);
-        });
-        dimsDeEstaRegional.forEach(dv=>{
-          const rByPeriod = porRegional.get(reg+sep+dv);
-          rows.push([reg, '(Resumen regional)', dv, ...periodos.flatMap(p=>valoresDesempenoDesdeAgg((rByPeriod&&rByPeriod.get(p))||{}))]);
-        });
-      }
-      rows.push(fila);
-    });
-    const nRows = Array.from(nacional.keys()).sort((a,b)=>{
-      if(dimension==='area'){
-        const ia=orderArea.indexOf(a), ib=orderArea.indexOf(b);
-        return (ia<0?999:ia)-(ib<0?999:ib);
-      }
-      return (parseInt(a,10)||999)-(parseInt(b,10)||999);
-    }).map(k=>['Nacional','Nacional', k, ...periodos.flatMap(p=>valoresDesempenoDesdeAgg(nacional.get(k).get(p)||{}))]);
-    rows.unshift(...nRows);
-  } else {
-    rows = filasOrdenadas;
-  }
-
-  return {headers:cfg.headers, periodos, subniveles:['Sat.','Acep.','Elem.','Índ.'], rows, weights:[...cfg.weightsBase, ...Array(periodos.length*4).fill(.62)]};
-}
 
 function lecturaTerritorialPorGradoEvolucion(amb, periodos, read){
   const cfg = configTerritorialAmbito(amb, ['Grado']);
@@ -2415,70 +2310,6 @@ function desempenoGradoAreaTerritorialEvolucion(amb, periodos, perf){
   return {headers:cfg.headers, periodos, subniveles:['Sat.','Acep.','Elem.'], grupos, weights:[...cfg.weightsBase, ...Array(periodos.length*3).fill(.62)], label:cfg.label};
 }
 
-function resumenTerritorialEvolucion(amb, periodos, perf, cov){
-  let headers, indices, weights;
-  if(amb.tipo==='distrito'){
-    headers = ['Centro educativo']; indices = [2]; weights = [2.3, ...Array(periodos.length*4).fill(.62)];
-  } else if(amb.tipo==='regional'){
-    headers = ['Distrito']; indices = [1]; weights = [1.75, ...Array(periodos.length*4).fill(.62)];
-  } else if(amb.tipo==='nacional'){
-    headers = ['Regional','Distrito']; indices = [0,1]; weights = [1.25, 1.45, ...Array(periodos.length*4).fill(.58)];
-  } else return null;
-
-  const periodSet = new Set(periodos);
-  const sep = '||';
-  const keyOf = r => indices.map(i=>idText(r[i])).join(sep);
-  const data = new Map();
-  const nacional = new Map();
-  const porRegional = new Map(); // agregados solo por Regional, para mostrar su resultado antes de sus distritos
-  for(const r of perf){
-    const p = idText(r[6]);
-    if(!periodSet.has(p)) continue;
-    const level = idText(r[12]);
-    const value = +r[13] || 0;
-    const k = keyOf(r);
-    if(k && !k.split(sep).some(x=>!x)){
-      if(!data.has(k)) data.set(k, new Map());
-      const byPeriod = data.get(k);
-      if(!byPeriod.has(p)) byPeriod.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
-      agregarNivel(byPeriod.get(p), level, value);
-    }
-    if(!nacional.has(p)) nacional.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
-    agregarNivel(nacional.get(p), level, value);
-    if(amb.tipo==='nacional'){
-      const reg = idText(r[0]);
-      if(reg){
-        if(!porRegional.has(reg)) porRegional.set(reg, new Map());
-        const byPeriodReg = porRegional.get(reg);
-        if(!byPeriodReg.has(p)) byPeriodReg.set(p, {Elemental:0,Aceptable:0,Satisfactorio:0});
-        agregarNivel(byPeriodReg.get(p), level, value);
-      }
-    }
-  }
-  const filasOrdenadas = Array.from(data.keys())
-    .sort((a,b)=>a.localeCompare(b,'es',{numeric:true,sensitivity:'base'}))
-    .map(k=>[...k.split(sep), ...periodos.flatMap(p=>valoresDesempenoDesdeAgg(data.get(k).get(p)||{}))])
-    .filter(r=>r.slice(headers.length).some(v=>v!=='—'));
-
-  let rows;
-  if(amb.tipo==='nacional'){
-    rows = [];
-    let regionalActual = null;
-    filasOrdenadas.forEach(fila=>{
-      const reg = fila[0];
-      if(reg !== regionalActual){
-        regionalActual = reg;
-        const byPeriodReg = porRegional.get(reg);
-        rows.push([reg, '(Resumen regional)', ...periodos.flatMap(p=>valoresDesempenoDesdeAgg((byPeriodReg&&byPeriodReg.get(p))||{}))]);
-      }
-      rows.push(fila);
-    });
-    rows.unshift(['Nacional','Nacional', ...periodos.flatMap(p=>valoresDesempenoDesdeAgg(nacional.get(p)||{}))]);
-  } else {
-    rows = filasOrdenadas;
-  }
-  return {headers, periodos, subniveles:['Sat.','Acep.','Elem.','Índ.'], rows, weights};
-}
 
 function puntosAtencion(amb, perf, cov){
   let idx, label;
@@ -3102,6 +2933,11 @@ async function generarInformePDF(){
       const altoEtiquetas = maxLineasCat*9 + 8;
       return altoBarras + altoEtiquetas + 22 + 10;
     }
+    function altoEstimadoLineas(altoPersonalizado){
+      // Replica el mismo cálculo que usa graficaLineas internamente, sin dibujar nada.
+      const altoGrafico = altoPersonalizado || 130;
+      return altoGrafico + 16 + 22 + 14;
+    }
     function subtituloPeriodo(periodo, alturaBloqueSiguiente){
       asegurarVertical();
       // Se reserva el espacio del subtítulo MÁS la altura real de lo que sigue
@@ -3181,104 +3017,89 @@ async function generarInformePDF(){
         }), [1,1,1,1]);
     }
 
-    const resumenTerritorial = resumenTerritorialEvolucion(amb, periodosDisponibles, perfX, covX);
-    if(resumenTerritorial && resumenTerritorial.rows.length){
-      titulo('Resumen territorial de resultados');
-      parrafo(textoResumenTerritorial(amb), 9.5);
-      await tablaPeriodosAgrupados(
-        resumenTerritorial.headers,
-        resumenTerritorial.periodos,
-        resumenTerritorial.subniveles,
-        resumenTerritorial.rows,
-        resumenTerritorial.weights,
-        {horizontal:true, titulo:'Resumen territorial de resultados'}
-      );
-      if(amb.tipo==='nacional' && periodoReciente){
-        const serie = serieRegionalDesempeno(periodoReciente);
-        await graficaRegionalHorizontal(`Desempeño regional - ${periodoReciente} (% Satisfactorio)`, serie.items, serie.nacional);
-      }
-    }
 
-    const unidadTerritorial = amb.tipo==='distrito' ? 'centros educativos' : amb.tipo==='regional' ? 'distritos' : 'regionales y distritos';
-    const resumenTerritorialGrado = resumenTerritorialPorDimensionEvolucion(amb, periodosDisponibles, perfX, 'grado');
-    if(resumenTerritorialGrado && resumenTerritorialGrado.rows.length){
-      titulo(`Resultados de ${unidadTerritorial} por grado`);
-      parrafo(textoResumenTerritorialDimension(amb, 'grado'), 9.5);
-      await tablaPeriodosAgrupados(
-        resumenTerritorialGrado.headers,
-        resumenTerritorialGrado.periodos,
-        resumenTerritorialGrado.subniveles,
-        resumenTerritorialGrado.rows,
-        resumenTerritorialGrado.weights,
-        {horizontal:true, titulo:`Resultados de ${unidadTerritorial} por grado`}
-      );
-      if(amb.tipo==='nacional' && periodoReciente){
-        for(const grado of orderGrade){
-          const serie = serieRegionalDesempeno(periodoReciente, r=>gradeOf(r)===grado);
-          if(serie.items.length){
-            await graficaRegionalHorizontal(`Desempeño regional ${grado}.º - ${periodoReciente} (% Satisfactorio)`, serie.items, serie.nacional);
-          }
-        }
-      }
-    }
+    titulo('Desempeño por grado y área');
+    parrafo('El desempeño se presenta siempre desagregado por grado y área; no se incluye un número general que mezcle resultados de grados o áreas distintas entre sí. Cada combinación de grado y área tiene su propia tabla y su propia gráfica de tendencia, incluyendo el índice de priorización.', 9.5);
 
-    const resumenTerritorialArea = resumenTerritorialPorDimensionEvolucion(amb, periodosDisponibles, perfX, 'area');
-    if(resumenTerritorialArea && resumenTerritorialArea.rows.length){
-      titulo(`Resultados de ${unidadTerritorial} por área`);
-      parrafo(textoResumenTerritorialDimension(amb, 'area'), 9.5);
-      await tablaPeriodosAgrupados(
-        resumenTerritorialArea.headers,
-        resumenTerritorialArea.periodos,
-        resumenTerritorialArea.subniveles,
-        resumenTerritorialArea.rows,
-        resumenTerritorialArea.weights,
-        {horizontal:true, titulo:`Resultados de ${unidadTerritorial} por área`}
-      );
-      if(amb.tipo==='nacional' && periodoReciente){
-        for(const area of orderArea){
-          const serie = serieRegionalDesempeno(periodoReciente, r=>idText(r[9])===area);
-          if(serie.items.length){
-            await graficaRegionalHorizontal(`Desempeño regional en ${area} - ${periodoReciente} (% Satisfactorio)`, serie.items, serie.nacional);
-          }
-        }
-      }
-    }
+    const gradosAreaPropios = orderGrade.map(g=>{
+      const areas = orderArea.map(a=>{
+        const porPeriodo = periodosDisponibles.map(p=>{
+          const rows = perfX.filter(r=>idText(r[6])===p && gradeOf(r)===g && idText(r[9])===a);
+          const m = aggLevels(rows,['Elemental','Aceptable','Satisfactorio'],12,13);
+          const tot = (m.Elemental||0)+(m.Aceptable||0)+(m.Satisfactorio||0);
+          if(!tot) return null;
+          const pe=pct(m.Elemental,tot), ps=pct(m.Satisfactorio,tot);
+          return {periodo:p, ps, pa:pct(m.Aceptable,tot), pe, idxB:breachIndex(pe,ps)};
+        });
+        return {area:a, porPeriodo};
+      }).filter(a=>a.porPeriodo.some(x=>x));
+      return {grado: gradeName[g], areas};
+    }).filter(g=>g.areas.length);
 
-    titulo('Desempeño');
-    parrafo(textoDesempeno(stReciente, periodoReciente));
-    if(comparPeriodos){
-      parrafo('A continuación, el mismo desempeño separado por periodo, en una sola tabla. La gráfica de barras muestra los tres niveles; la de línea se enfoca solo en Satisfactorio, el aspecto elegido para ver la tendencia.', 9.5);
-      tabla(['Periodo','% Satisfactorio','% Aceptable','% Elemental'],
-        comparPeriodos.map(c=>[c.periodo, pctf(c.stats.perf.ps), pctf(c.stats.perf.pa), pctf(c.stats.perf.pe)]), [1.3,1,1,1]);
-      graficaBarras(comparPeriodos.map(c=>c.periodo), [
-        {nombre:'Satisfactorio', valores:comparPeriodos.map(c=>c.stats.perf.ps)},
-        {nombre:'Aceptable', valores:comparPeriodos.map(c=>c.stats.perf.pa)},
-        {nombre:'Elemental', valores:comparPeriodos.map(c=>c.stats.perf.pe)}
-      ], COLOR_DESEMPENO_PDF);
-      graficaLineas(comparPeriodos.map(c=>c.periodo), [
-        {nombre:'Satisfactorio', valores:comparPeriodos.map(c=>c.stats.perf.ps)}
-      ], [hexARgb(C.S)]);
-      parrafo(textoComparacionPeriodos(comparPeriodos));
+    if(gradosAreaPropios.length){
+      gradosAreaPropios.forEach(g=>{
+        subtituloPeriodo(g.grado);
+        const filasGA = [];
+        g.areas.forEach(a=>{
+          let primeraFilaArea = true;
+          a.porPeriodo.forEach(x=>{
+            if(!x) return;
+            filasGA.push([primeraFilaArea?a.area:'', x.periodo, pctf(x.ps), pctf(x.pa), pctf(x.pe), x.idxB.toFixed(2)]);
+            primeraFilaArea = false;
+          });
+        });
+        tabla(['Área','Periodo','% Satisfactorio','% Aceptable','% Elemental','Índice'], filasGA, [1.4,1,0.9,0.9,0.9,0.7]);
+
+        g.areas.forEach(a=>{
+          const conDatos = a.porPeriodo.filter(x=>x);
+          if(conDatos.length<2) return;
+          subtituloPeriodo(`${g.grado} — ${a.area}`, altoEstimadoLineas(90));
+          graficaLineas(conDatos.map(x=>x.periodo), [
+            {nombre:'% Satisfactorio', valores:conDatos.map(x=>x.ps)},
+            {nombre:'Índice de priorización', valores:conDatos.map(x=>x.idxB)}
+          ], [hexARgb(C.S), hexARgb('#C8102E')], 90);
+        });
+      });
     } else {
-      parrafo('Solo hay un periodo con datos disponibles para este ámbito, por lo que no es posible separar por periodo.', 9.5);
+      parrafo('No hay suficientes datos de desempeño para este ámbito con los filtros seleccionados.', 9.5);
     }
 
-    titulo('Lectura');
-    parrafo(textoLectura(stReciente, soloSegundoCiclo, periodoReciente));
+    titulo('Lectura por grado');
+    parrafo('Los niveles de lectura se presentan siempre por grado (aplica solo a primero, segundo y tercer grado); no se incluye un número general que mezcle todos los grados.', 9.5);
     if(!soloSegundoCiclo){
       if(comparPeriodos){
-        parrafo('A continuación, los mismos niveles de lectura separados por periodo, en una sola tabla. La gráfica de línea se enfoca solo en Lector fluido, el aspecto elegido para ver la tendencia.', 9.5);
-        tabla(['Periodo','% Lector fluido','% Lector no fluido'],
-          comparPeriodos.map(c=>[c.periodo, pctf(c.stats.read.fluidoPct), pctf(c.stats.read.noFluidoPct)]), [1.3,1,1]);
-        graficaBarras(comparPeriodos.map(c=>c.periodo), [
-          {nombre:'Lector fluido', valores:comparPeriodos.map(c=>c.stats.read.fluidoPct)},
-          {nombre:'Lector no fluido', valores:comparPeriodos.map(c=>c.stats.read.noFluidoPct)}
-        ], COLOR_LECTURA2_PDF);
+        parrafo('Resumen visual de la tendencia general del % de lectores fluidos. El detalle por grado se presenta justo debajo.', 9);
         graficaLineas(comparPeriodos.map(c=>c.periodo), [
-          {nombre:'Lector fluido', valores:comparPeriodos.map(c=>c.stats.read.fluidoPct)}
+          {nombre:'% Lector fluido (general)', valores:comparPeriodos.map(c=>c.stats.read.fluidoPct)}
         ], [hexARgb(C.N5)]);
       } else {
         parrafo('Solo hay un periodo con datos disponibles para este ámbito.', 9.5);
+      }
+
+      const lecturaGradosPropios = [1,2,3].map(g=>{
+        const porPeriodo = periodosDisponibles.map(p=>{
+          const rows = readX.filter(r=>idText(r[6])===p && gradeOf(r)===g);
+          const m = aggLevels(rows, readOrder, 9, 10);
+          const tot = Object.values(m).reduce((a,b)=>a+b,0);
+          if(!tot) return null;
+          return {periodo:p, niveles: readOrder.map(lv=>pct(m[lv]||0,tot))};
+        });
+        return {grado: gradeName[g], porPeriodo};
+      }).filter(g=>g.porPeriodo.some(x=>x));
+
+      if(lecturaGradosPropios.length){
+        const filasLecProp = [];
+        lecturaGradosPropios.forEach(g=>{
+          let primeraFilaGrado = true;
+          g.porPeriodo.forEach(x=>{
+            if(!x) return;
+            filasLecProp.push([primeraFilaGrado?g.grado:'', x.periodo, ...x.niveles.map(pctf)]);
+            primeraFilaGrado = false;
+          });
+        });
+        tabla(['Grado','Periodo', ...readOrder], filasLecProp, [0.9,0.9,1,1,1,1,1]);
+      } else {
+        parrafo('No hay suficientes datos de lectura para este ámbito con los filtros seleccionados.', 9.5);
       }
     }
 
