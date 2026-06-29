@@ -228,14 +228,111 @@ button{font:inherit}
     content:"🔒";
 }
 
+.admin-modal{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:1rem;
+    background:rgba(5,25,48,.58);
+    z-index:3000;
+}
+.admin-modal.show{display:flex}
+.admin-card{
+    width:min(760px,100%);
+    max-height:92vh;
+    overflow:auto;
+    background:#fff;
+    border:1px solid var(--borde);
+    border-radius:18px;
+    box-shadow:0 24px 70px rgba(0,23,51,.32);
+}
+.admin-head{
+    display:flex;
+    justify-content:space-between;
+    gap:1rem;
+    align-items:flex-start;
+    padding:1.05rem 1.15rem;
+    border-bottom:1px solid #e7eef6;
+}
+.admin-head h2{font-size:1.2rem;color:var(--azul);line-height:1.2}
+.admin-head p{margin-top:.2rem;color:var(--texto-2);font-size:.9rem}
+.admin-close{
+    border:0;
+    background:#eef4fb;
+    color:var(--azul);
+    width:36px;
+    height:36px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:900;
+}
+.admin-mini-btn{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,.26);
+    background:rgba(255,255,255,.08);
+    color:rgba(255,255,255,.78);
+    cursor:pointer;
+    font-size:.78rem;
+    font-weight:900;
+    opacity:.72;
+    box-shadow:none;
+}
+.admin-mini-btn:hover{
+    opacity:1;
+    background:rgba(255,255,255,.16);
+}
+.admin-login{
+    padding:1rem 1.15rem 1.15rem;
+    border-bottom:1px solid #e7eef6;
+}
+.admin-body{padding:1rem 1.15rem 1.15rem}
+.admin-body[hidden],.admin-login[hidden]{display:none}
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
+.admin-field{display:flex;flex-direction:column;gap:.35rem}
+.admin-field.full{grid-column:1 / -1}
+.admin-field label{font-weight:850;color:var(--texto);font-size:.86rem}
+.admin-field input,
+.admin-field select{
+    width:100%;
+    border:1px solid var(--borde);
+    border-radius:12px;
+    padding:.72rem .8rem;
+    color:var(--texto);
+    background:#fbfdff;
+    font:inherit;
+}
+.admin-field small{color:var(--texto-2);font-size:.78rem;line-height:1.35}
+.admin-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:.6rem;
+    flex-wrap:wrap;
+    margin-top:1rem;
+}
+.admin-action{
+    min-height:40px;
+    border-radius:12px;
+    border:1px solid var(--borde);
+    padding:.65rem .9rem;
+    cursor:pointer;
+    font-weight:850;
+    background:#fff;
+    color:var(--azul);
+}
+.admin-action.primary{background:var(--azul);color:#fff;border-color:var(--azul)}
+.admin-status{margin-top:.75rem;color:var(--texto-2);font-weight:750;font-size:.86rem}
+
 /* =============================
    MAIN
    ============================= */
 main{
-    width:100%;
-    max-width:none;
-    margin:0;
-    padding:.75rem;
+    max-width:1480px;
+    margin:0 auto;
+    padding:1rem 1.25rem 1.6rem;
 }
 .resource-card{
     background:#fff;
@@ -294,9 +391,9 @@ main{
 .status-pill::before{content:"";width:8px;height:8px;background:var(--rojo);border-radius:50%}
 .report-container{
     width:100%;
-    min-height:calc(100vh - 220px);
+    min-height:0;
     background:#fff;
-    border-radius:12px;
+    border-radius:var(--radio);
     overflow:hidden;
     box-shadow:var(--sombra);
     border:1px solid var(--borde);
@@ -312,8 +409,8 @@ main{
 }
 iframe{
     width:100%;
-    height:calc(100vh - 220px);
-    min-height:720px;
+    height:720px;
+    min-height:0;
     border:none;
     display:block;
     background:#fff;
@@ -334,6 +431,7 @@ iframe{
     .nav-btn{justify-content:space-between}
     .nav-spacer,.quick-note{display:none}
     .countdown-pill{width:100%;justify-content:center}
+    .admin-grid{grid-template-columns:1fr}
     .resource-head{grid-template-columns:1fr}
     .status-pill{justify-self:start}
     iframe{min-height:640px;height:75vh}
@@ -408,12 +506,142 @@ iframe{
             <div class="nav-spacer"></div>
             <div id="conteoCierreFormularios" class="countdown-pill" aria-live="polite">Registro abierto</div>
             <div id="quickNote" class="quick-note"></div>
+            <button class="admin-mini-btn" onclick="abrirPanelAdmin(event)" title="Acceso administrador" aria-label="Acceso administrador">A</button>
     </nav>
 </header>
 
+<div id="panelAdmin" class="admin-modal" aria-hidden="true">
+    <div class="admin-card" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+        <div class="admin-head">
+            <div>
+                <h2 id="adminTitle">Configuración de fuentes de datos</h2>
+                <p>Ingrese URLs publicadas de Google Sheets o enlaces directos para actualizar las entradas de la plataforma.</p>
+            </div>
+            <button class="admin-close" onclick="cerrarPanelAdmin()" aria-label="Cerrar">X</button>
+        </div>
+        <div id="adminLogin" class="admin-login">
+            <div class="admin-grid">
+                <div class="admin-field">
+                    <label for="adminUser">Usuario</label>
+                    <input id="adminUser" type="text" autocomplete="username">
+                </div>
+                <div class="admin-field">
+                    <label for="adminPass">Clave</label>
+                    <input id="adminPass" type="password" autocomplete="current-password">
+                </div>
+            </div>
+            <div class="admin-actions">
+                <button class="admin-action primary" onclick="validarAccesoAdmin()">Ingresar</button>
+            </div>
+            <div id="adminLoginStatus" class="admin-status" aria-live="polite"></div>
+        </div>
+        <div id="adminBody" class="admin-body" hidden>
+            <div class="admin-grid">
+                <div class="admin-field full">
+                    <label for="adminYear">Año lectivo a actualizar</label>
+                    <select id="adminYear" onchange="cambiarAnioAdmin()"></select>
+                    <small>Las URLs guardadas se aplican únicamente al año seleccionado aquí.</small>
+                </div>
+                <div class="admin-field">
+                    <label for="adminNewYear">Nuevo año lectivo</label>
+                    <input id="adminNewYear" type="text" placeholder="2027-2028">
+                </div>
+                <div class="admin-field">
+                    <label>&nbsp;</label>
+                    <button class="admin-action" onclick="crearAnioAdmin()">Añadir año lectivo</button>
+                    <small>Use el formato 2027-2028.</small>
+                </div>
+                <div class="admin-field full">
+                    <label for="adminDashboardUrl">Dashboard interactivo SIREV</label>
+                    <input id="adminDashboardUrl" type="text" placeholder="dashboard_sirev_primaria_v41_admin.html">
+                    <small>Puede ser un HTML local o una URL publicada. Si usa el dashboard local, se conservan sus datos empaquetados actuales.</small>
+                </div>
+                <div class="admin-field full">
+                    <label for="adminPowerBiUrl">Informe Power BI</label>
+                    <input id="adminPowerBiUrl" type="text" placeholder="https://app.powerbi.com/view?...">
+                </div>
+                <div class="admin-field">
+                    <label for="adminPruebaSeptiembre">Pruebas y rúbricas - Septiembre</label>
+                    <input id="adminPruebaSeptiembre" type="text" placeholder="https://drive.google.com/...">
+                </div>
+                <div class="admin-field">
+                    <label for="adminPruebaNoviembre">Pruebas y rúbricas - Noviembre</label>
+                    <input id="adminPruebaNoviembre" type="text" placeholder="https://drive.google.com/...">
+                </div>
+                <div class="admin-field">
+                    <label for="adminPruebaMarzo">Pruebas y rúbricas - Marzo</label>
+                    <input id="adminPruebaMarzo" type="text" placeholder="https://drive.google.com/...">
+                </div>
+                <div class="admin-field">
+                    <label for="adminPruebaMayo">Pruebas y rúbricas - Mayo</label>
+                    <input id="adminPruebaMayo" type="text" placeholder="https://drive.google.com/...">
+                </div>
+                <div class="admin-field">
+                    <label for="adminSistSeptiembre">Sistematización - Septiembre</label>
+                    <input id="adminSistSeptiembre" type="text" placeholder="https://...">
+                </div>
+                <div class="admin-field">
+                    <label for="adminSistNoviembre">Sistematización - Noviembre</label>
+                    <input id="adminSistNoviembre" type="text" placeholder="https://...">
+                </div>
+                <div class="admin-field">
+                    <label for="adminSistMarzo">Sistematización - Marzo</label>
+                    <input id="adminSistMarzo" type="text" placeholder="https://...">
+                </div>
+                <div class="admin-field">
+                    <label for="adminSistMayo">Sistematización / monitoreo - Mayo</label>
+                    <input id="adminSistMayo" type="text" placeholder="monitoreo_sistematizacion_admin.html">
+                </div>
+                <div class="admin-field">
+                    <label for="adminPcUrl">Hoja primer ciclo</label>
+                    <input id="adminPcUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                    <small>Se acepta URL publicada CSV o enlace de Google Sheets.</small>
+                </div>
+                <div class="admin-field">
+                    <label for="adminScUrl">Hoja segundo ciclo</label>
+                    <input id="adminScUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                    <small>Estas dos hojas alimentan el monitoreo embebiendo parámetros en la URL.</small>
+                </div>
+                <div class="admin-field full">
+                    <label for="adminDeadline">Fecha límite del registro de resultados</label>
+                    <input id="adminDeadline" type="datetime-local">
+                    <small>Esta fecha controla el contador del portal y el cierre de los formularios locales.</small>
+                </div>
+            </div>
+            <div class="admin-actions">
+                <button class="admin-action" onclick="restaurarConfigAdmin()">Restaurar valores</button>
+                <button class="admin-action primary" onclick="guardarConfigAdmin()">Guardar y aplicar</button>
+            </div>
+            <div id="adminStatus" class="admin-status" aria-live="polite"></div>
+
+            <div class="admin-field full" style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:14px;">
+                <label for="adminPublishPass">Publicar para todos los visitantes</label>
+                <small>Esto sube el cambio directamente al repositorio de GitHub. Pide una clave distinta a la del panel — esa clave nunca está escrita en este archivo, solo tú la conoces.</small>
+                <input id="adminPublishPass" type="password" placeholder="Clave de publicación" style="margin-top:6px;max-width:260px;">
+                <div class="admin-actions" style="margin-top:8px;">
+                    <button class="admin-action primary" onclick="publicarConfigAdmin()">Publicar para todos</button>
+                    <button class="admin-action" onclick="generarCodigoAdmin()">Generar código (manual, por si falla lo anterior)</button>
+                </div>
+                <div id="adminPublishStatus" class="admin-status" aria-live="polite"></div>
+            </div>
+
+            <div id="adminExportBox" class="admin-field full" style="display:none;margin-top:10px;">
+                <label for="adminExportTextarea">Código para pegar en el archivo (reemplaza la configuración publicada para todos)</label>
+                <small>
+                    1) Copia este texto. 2) En el código del sitio, busca la línea <code>const adminDefaults = ...</code> (puede ser la llamada a la función o un objeto ya pegado antes) y reemplázala por <code>const adminDefaults = </code> seguido de este texto y un punto y coma. 3) Sube el archivo a GitHub.
+                </small>
+                <textarea id="adminExportTextarea" readonly rows="10" style="width:100%;margin-top:8px;font-family:monospace;font-size:12.5px;"></textarea>
+                <div class="admin-actions" style="margin-top:8px;">
+                    <button class="admin-action primary" onclick="copiarCodigoAdmin()">Copiar al portapapeles</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <main>
     <div class="report-container full-focus">
-        <iframe id="visorInforme" title="Visor SIREV Primaria" src="dashboard_sirev_primaria_v41_admin.html?v=59"></iframe>
+        <iframe id="visorInforme" title="Visor SIREV Primaria" src="dashboard_sirev_primaria_v41_admin.html?v=46"></iframe>
     </div>
 </main>
 
@@ -425,7 +653,7 @@ iframe{
 const datosPorAnio = {
     "2025-2026": {
         informe: "https://app.powerbi.com/view?r=eyJrIjoiZWE0NjFhYWYtY2M5ZS00ZDQ4LWFiZDAtNmU1ZGZkYTVjNWViIiwidCI6IjY2ZTI4OThiLTJjMzUtNDMzZi1hNzUzLWJkNjRhY2EzOWFmYiIsImMiOjF9",
-        dashboard: "dashboard_sirev_primaria_v41_admin.html?v=59",
+        dashboard: "dashboard_sirev_primaria_v41_admin.html?v=46",
         pruebas: {
             septiembre: "https://drive.google.com/drive/folders/1DVgvr8SuIApyFKk2kQUaZjy2c736xGZh",
             noviembre: "https://drive.google.com/drive/folders/1mHf3_gLi4ZIj_YLRPB0-CYh0b_Y1CMWV",
@@ -436,11 +664,11 @@ const datosPorAnio = {
             septiembre: "https://aminier06.github.io/sistematizacionsept-nov-mar/?mes=septiembre",
             noviembre: "https://aminier06.github.io/sistematizacionsept-nov-mar/?mes=noviembre",
             marzo: "https://aminier06.github.io/sistematizacionsept-nov-mar/?mes=marzo",
-            mayo: "https://aminier06.github.io/sistematizacionmayo26/"
+            mayo: "monitoreo_sistematizacion_admin.html"
         },
         formularios: {
-            primerCiclo: "https://aminier06.github.io/formularioprimerciclo/",
-            segundoCiclo: "https://aminier06.github.io/formulariosegundociclo/"
+            primerCiclo: "formulario_primer_ciclo.html",
+            segundoCiclo: "formulario_segundo_ciclo.html"
         }
     },
     "2026-2027": {
@@ -448,17 +676,415 @@ const datosPorAnio = {
         dashboard: "",
         pruebas: {},
         sistematizacion: {},
-        formularios: {}
+        formularios: {
+            primerCiclo: "formulario_primer_ciclo.html",
+            segundoCiclo: "formulario_segundo_ciclo.html"
+        }
     }
 };
 
 let anioSeleccionado = "2025-2026";
 let dashboardActual = "sirevInteractivo";
+const ADMIN_CONFIG_KEY = "sirevPrimariaAdminConfig";
+const ADMIN_SESSION_KEY = "sirevPrimariaAdminSession";
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "Sirev2026*";
+// Reemplaza esta URL por la de tu función de Supabase una vez la despliegues.
+const SUPABASE_FUNCTION_URL = "https://TU-PROYECTO.functions.supabase.co/publicar-config-sirev";
+const FORMULARIOS_FIJOS = {
+    primerCiclo: "formulario_primer_ciclo.html",
+    segundoCiclo: "formulario_segundo_ciclo.html"
+};
+const adminDefaults = construirConfigAdminBase();
+let adminConfig = cargarConfigAdmin();
+let anioAdminSeleccionado = anioSeleccionado;
+
+function clonar(obj) {
+    return JSON.parse(JSON.stringify(obj));
+}
+
+function crearConfigAnioVacia() {
+    return {
+        dashboardUrl: "",
+        powerBiUrl: "",
+        pruebas: {septiembre: "", noviembre: "", marzo: "", mayo: ""},
+        sistematizacion: {septiembre: "", noviembre: "", marzo: "", mayo: ""},
+        pcUrl: "",
+        scUrl: "",
+        deadlineIso: ""
+    };
+}
+
+function crearDatosAnioVacio() {
+    return {
+        informe: "",
+        dashboard: "",
+        pruebas: {septiembre: "", noviembre: "", marzo: "", mayo: ""},
+        sistematizacion: {septiembre: "", noviembre: "", marzo: "", mayo: ""},
+        formularios: {...FORMULARIOS_FIJOS}
+    };
+}
+
+function construirConfigAdminBase() {
+    const years = {};
+    Object.entries(datosPorAnio).forEach(([anio, datos]) => {
+        years[anio] = {
+            dashboardUrl: datos.dashboard || "",
+            powerBiUrl: datos.informe || "",
+            pruebas: {
+                septiembre: datos.pruebas?.septiembre || "",
+                noviembre: datos.pruebas?.noviembre || "",
+                marzo: datos.pruebas?.marzo || "",
+                mayo: datos.pruebas?.mayo || ""
+            },
+            sistematizacion: {
+                septiembre: datos.sistematizacion?.septiembre || "",
+                noviembre: datos.sistematizacion?.noviembre || "",
+                marzo: datos.sistematizacion?.marzo || "",
+                mayo: datos.sistematizacion?.mayo || ""
+            },
+            pcUrl: "",
+            scUrl: "",
+            deadlineIso: anio === "2025-2026" ? "2026-06-12T14:00:00-04:00" : ""
+        };
+    });
+    return {years};
+}
+
+function normalizarConfigAdmin(saved) {
+    const base = clonar(adminDefaults);
+    if (!saved || typeof saved !== "object") return base;
+    if (!saved.years) {
+        base.years["2025-2026"] = {
+            ...base.years["2025-2026"],
+            dashboardUrl: saved.dashboardUrl || base.years["2025-2026"].dashboardUrl,
+            powerBiUrl: saved.powerBiUrl || base.years["2025-2026"].powerBiUrl,
+            pcUrl: saved.pcUrl || "",
+            scUrl: saved.scUrl || "",
+            deadlineIso: saved.deadlineIso || base.years["2025-2026"].deadlineIso,
+            sistematizacion: {
+                ...base.years["2025-2026"].sistematizacion,
+                mayo: saved.monitoreoUrl || base.years["2025-2026"].sistematizacion.mayo
+            }
+        };
+        return base;
+    }
+    Object.keys(base.years).forEach(anio => {
+        const yearSaved = saved.years?.[anio] || {};
+        base.years[anio] = {
+            ...base.years[anio],
+            ...yearSaved,
+            pruebas: {...base.years[anio].pruebas, ...(yearSaved.pruebas || {})},
+            sistematizacion: {...base.years[anio].sistematizacion, ...(yearSaved.sistematizacion || {})}
+        };
+    });
+    Object.keys(saved.years || {}).forEach(anio => {
+        if (base.years[anio]) return;
+        const yearSaved = saved.years[anio] || {};
+        base.years[anio] = {
+            ...crearConfigAnioVacia(),
+            ...yearSaved,
+            pruebas: {...crearConfigAnioVacia().pruebas, ...(yearSaved.pruebas || {})},
+            sistematizacion: {...crearConfigAnioVacia().sistematizacion, ...(yearSaved.sistematizacion || {})}
+        };
+    });
+    return base;
+}
+
+function cargarConfigAdmin() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(ADMIN_CONFIG_KEY) || "{}");
+        return normalizarConfigAdmin(saved);
+    } catch (e) {
+        return clonar(adminDefaults);
+    }
+}
+
+function aplicarConfigAdmin() {
+    Object.keys(adminConfig.years || {}).forEach(anio => {
+        if (!datosPorAnio[anio]) datosPorAnio[anio] = crearDatosAnioVacio();
+    });
+    Object.keys(datosPorAnio).forEach(anio => {
+        const cfg = configAnio(anio);
+        datosPorAnio[anio].dashboard = cfg.dashboardUrl || "";
+        datosPorAnio[anio].informe = cfg.powerBiUrl || "";
+        datosPorAnio[anio].pruebas = {...cfg.pruebas};
+        datosPorAnio[anio].sistematizacion = {...cfg.sistematizacion};
+        datosPorAnio[anio].formularios = {...FORMULARIOS_FIJOS};
+    });
+    const cfgActual = configAnio(anioSeleccionado);
+    fechaCierreFormularios = new Date(cfgActual.deadlineIso || "2999-12-31T23:59:00-04:00");
+    mensajeCierreFormularios = "El registro de resultados cerró el " + formatearFechaCierre(fechaCierreFormularios) + ".";
+}
+
+function configAnio(anio) {
+    if (!adminConfig.years[anio]) {
+        adminConfig.years[anio] = clonar(adminDefaults.years[anio] || crearConfigAnioVacia());
+    }
+    return adminConfig.years[anio];
+}
+
+function abrirPanelAdmin(e) {
+    if (e) e.stopPropagation();
+    cerrarMenus();
+    mostrarEstadoAccesoAdmin();
+    const panel = document.getElementById("panelAdmin");
+    panel.classList.add("show");
+    panel.setAttribute("aria-hidden", "false");
+}
+
+function cerrarPanelAdmin() {
+    const panel = document.getElementById("panelAdmin");
+    panel.classList.remove("show");
+    panel.setAttribute("aria-hidden", "true");
+    document.getElementById("adminPass").value = "";
+    document.getElementById("adminLoginStatus").textContent = "";
+}
+
+function adminAutenticado() {
+    return sessionStorage.getItem(ADMIN_SESSION_KEY) === "ok";
+}
+
+function mostrarEstadoAccesoAdmin() {
+    const login = document.getElementById("adminLogin");
+    const body = document.getElementById("adminBody");
+    const auth = adminAutenticado();
+    login.hidden = auth;
+    body.hidden = !auth;
+    document.getElementById("adminLoginStatus").textContent = "";
+    if (auth) {
+        anioAdminSeleccionado = anioSeleccionado;
+        llenarFormularioAdmin();
+    } else {
+        document.getElementById("adminUser").value = "";
+        document.getElementById("adminPass").value = "";
+        setTimeout(() => document.getElementById("adminUser").focus(), 50);
+    }
+}
+
+function validarAccesoAdmin() {
+    const user = document.getElementById("adminUser").value.trim();
+    const pass = document.getElementById("adminPass").value;
+    if (user === ADMIN_USER && pass === ADMIN_PASS) {
+        sessionStorage.setItem(ADMIN_SESSION_KEY, "ok");
+        mostrarEstadoAccesoAdmin();
+        return;
+    }
+    document.getElementById("adminLoginStatus").textContent = "Usuario o clave incorrectos.";
+}
+
+function llenarFormularioAdmin() {
+    poblarSelectorAnioAdmin();
+    const cfg = configAnio(anioAdminSeleccionado);
+    document.getElementById("adminDashboardUrl").value = cfg.dashboardUrl || "";
+    document.getElementById("adminPowerBiUrl").value = cfg.powerBiUrl || "";
+    document.getElementById("adminPruebaSeptiembre").value = cfg.pruebas?.septiembre || "";
+    document.getElementById("adminPruebaNoviembre").value = cfg.pruebas?.noviembre || "";
+    document.getElementById("adminPruebaMarzo").value = cfg.pruebas?.marzo || "";
+    document.getElementById("adminPruebaMayo").value = cfg.pruebas?.mayo || "";
+    document.getElementById("adminSistSeptiembre").value = cfg.sistematizacion?.septiembre || "";
+    document.getElementById("adminSistNoviembre").value = cfg.sistematizacion?.noviembre || "";
+    document.getElementById("adminSistMarzo").value = cfg.sistematizacion?.marzo || "";
+    document.getElementById("adminSistMayo").value = cfg.sistematizacion?.mayo || "";
+    document.getElementById("adminPcUrl").value = cfg.pcUrl || "";
+    document.getElementById("adminScUrl").value = cfg.scUrl || "";
+    document.getElementById("adminDeadline").value = fechaIsoParaInput(cfg.deadlineIso || "");
+    document.getElementById("adminStatus").textContent = "";
+}
+
+function poblarSelectorAnioAdmin() {
+    const select = document.getElementById("adminYear");
+    const options = obtenerAniosDisponibles().map(anio => `<option value="${anio}">${anio}</option>`).join("");
+    if (select.innerHTML !== options) select.innerHTML = options;
+    if (!datosPorAnio[anioAdminSeleccionado]) anioAdminSeleccionado = anioSeleccionado;
+    select.value = anioAdminSeleccionado;
+}
+
+function obtenerAniosDisponibles() {
+    return [...new Set([...Object.keys(datosPorAnio), ...Object.keys(adminConfig.years || {})])].sort();
+}
+
+function poblarMenuAnioPublico() {
+    const menu = document.getElementById("menuAnio");
+    if (!menu) return;
+    menu.innerHTML = obtenerAniosDisponibles()
+        .map(anio => `<button onclick="seleccionarAnio('${anio}')">${anio}</button>`)
+        .join("");
+}
+
+function cambiarAnioAdmin() {
+    anioAdminSeleccionado = document.getElementById("adminYear").value;
+    llenarFormularioAdmin();
+}
+
+function crearAnioAdmin() {
+    if (!adminAutenticado()) return;
+    const input = document.getElementById("adminNewYear");
+    const nuevoAnio = input.value.trim();
+    if (!/^\d{4}-\d{4}$/.test(nuevoAnio)) {
+        document.getElementById("adminStatus").textContent = "Escriba el año lectivo con el formato 2027-2028.";
+        return;
+    }
+    const [inicio, fin] = nuevoAnio.split("-").map(Number);
+    if (fin !== inicio + 1) {
+        document.getElementById("adminStatus").textContent = "El segundo año debe ser consecutivo al primero.";
+        return;
+    }
+    if (!datosPorAnio[nuevoAnio]) datosPorAnio[nuevoAnio] = crearDatosAnioVacio();
+    if (!adminConfig.years[nuevoAnio]) adminConfig.years[nuevoAnio] = crearConfigAnioVacia();
+    anioAdminSeleccionado = nuevoAnio;
+    input.value = "";
+    localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(adminConfig));
+    aplicarConfigAdmin();
+    poblarMenuAnioPublico();
+    llenarFormularioAdmin();
+    document.getElementById("adminStatus").textContent = "Año lectivo " + nuevoAnio + " añadido. Complete sus enlaces y guarde.";
+}
+
+async function publicarConfigAdmin() {
+    if (!adminAutenticado()) return;
+    const claveInput = document.getElementById("adminPublishPass");
+    const clave = claveInput.value;
+    const status = document.getElementById("adminPublishStatus");
+    if (!clave) {
+        status.textContent = "Escribe la clave de publicación.";
+        return;
+    }
+    if (SUPABASE_FUNCTION_URL.includes("TU-PROYECTO")) {
+        status.textContent = "Falta configurar SUPABASE_FUNCTION_URL en el código con la URL real de tu función.";
+        return;
+    }
+    status.textContent = "Publicando para todos los visitantes...";
+    try {
+        const resp = await fetch(SUPABASE_FUNCTION_URL, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ password: clave, years: adminConfig.years })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (resp.ok && data.ok) {
+            status.textContent = "Publicado. El sitio puede tardar uno o dos minutos en reflejar el cambio para todos.";
+            claveInput.value = "";
+        } else {
+            status.textContent = "No se pudo publicar: " + (data.error || ("Error " + resp.status));
+        }
+    } catch (err) {
+        status.textContent = "No se pudo conectar con el servicio de publicación: " + err.message;
+    }
+}
+
+function generarCodigoAdmin() {
+    if (!adminAutenticado()) return;
+    const texto = JSON.stringify({years: adminConfig.years}, null, 2);
+    document.getElementById("adminExportTextarea").value = texto;
+    document.getElementById("adminExportBox").style.display = "block";
+    document.getElementById("adminStatus").textContent = "Código generado. Cópialo y sigue las instrucciones para publicarlo.";
+}
+
+function copiarCodigoAdmin() {
+    const textarea = document.getElementById("adminExportTextarea");
+    textarea.select();
+    let copiado = false;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textarea.value).then(() => {
+            document.getElementById("adminStatus").textContent = "Código copiado al portapapeles.";
+        }).catch(() => {
+            document.getElementById("adminStatus").textContent = "No se pudo copiar automáticamente. El texto ya está seleccionado: usa Ctrl+C (o Cmd+C en Mac).";
+        });
+        copiado = true;
+    }
+    if (!copiado) {
+        document.getElementById("adminStatus").textContent = "El texto ya está seleccionado: usa Ctrl+C (o Cmd+C en Mac) para copiarlo.";
+    }
+}
+
+function guardarConfigAdmin() {
+    if (!adminAutenticado()) return;
+    adminConfig.years[anioAdminSeleccionado] = {
+        dashboardUrl: document.getElementById("adminDashboardUrl").value.trim(),
+        powerBiUrl: document.getElementById("adminPowerBiUrl").value.trim(),
+        pruebas: {
+            septiembre: document.getElementById("adminPruebaSeptiembre").value.trim(),
+            noviembre: document.getElementById("adminPruebaNoviembre").value.trim(),
+            marzo: document.getElementById("adminPruebaMarzo").value.trim(),
+            mayo: document.getElementById("adminPruebaMayo").value.trim()
+        },
+        sistematizacion: {
+            septiembre: document.getElementById("adminSistSeptiembre").value.trim(),
+            noviembre: document.getElementById("adminSistNoviembre").value.trim(),
+            marzo: document.getElementById("adminSistMarzo").value.trim(),
+            mayo: document.getElementById("adminSistMayo").value.trim()
+        },
+        pcUrl: document.getElementById("adminPcUrl").value.trim(),
+        scUrl: document.getElementById("adminScUrl").value.trim(),
+        deadlineIso: inputFechaAIso(document.getElementById("adminDeadline").value, anioAdminSeleccionado)
+    };
+    localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(adminConfig));
+    aplicarConfigAdmin();
+    poblarMenuAnioPublico();
+    document.getElementById("adminStatus").textContent = "Configuración guardada para " + anioAdminSeleccionado + ".";
+    actualizarConteoCierreFormularios();
+    if (dashboardActual === "sirevInteractivo") abrirDashboard("sirevInteractivo");
+}
+
+function restaurarConfigAdmin() {
+    if (!adminAutenticado()) return;
+    adminConfig.years[anioAdminSeleccionado] = clonar(adminDefaults.years[anioAdminSeleccionado] || crearConfigAnioVacia());
+    localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(adminConfig));
+    aplicarConfigAdmin();
+    poblarMenuAnioPublico();
+    llenarFormularioAdmin();
+    if (dashboardActual === "sirevInteractivo") abrirDashboard("sirevInteractivo");
+    actualizarConteoCierreFormularios();
+    document.getElementById("adminStatus").textContent = "Se restauraron los valores originales de " + anioAdminSeleccionado + ".";
+}
+
+function agregarParametrosAdmin(url) {
+    if (!url) return url;
+    const cfg = configAnio(anioSeleccionado);
+    const params = new URLSearchParams();
+    if (cfg.pcUrl) params.set("pcUrl", cfg.pcUrl);
+    if (cfg.scUrl) params.set("scUrl", cfg.scUrl);
+    const query = params.toString();
+    if (!query) return url;
+    return url + (url.includes("?") ? "&" : "?") + query;
+}
+
+function agregarParametrosFormulario(url) {
+    if (!url) return url;
+    const cfg = configAnio(anioSeleccionado);
+    const params = new URLSearchParams();
+    if (cfg.deadlineIso) params.set("cierre", cfg.deadlineIso);
+    const query = params.toString();
+    if (!query) return url;
+    return url + (url.includes("?") ? "&" : "?") + query;
+}
+
+function fechaIsoParaInput(iso) {
+    const m = String(iso || "").match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+    return m ? m[1] : "";
+}
+
+function inputFechaAIso(value, anio = anioSeleccionado) {
+    return value ? value + ":00-04:00" : (adminDefaults.years[anio]?.deadlineIso || "");
+}
+
+function formatearFechaCierre(date) {
+    return date.toLocaleString("es-DO", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZone: "America/Santo_Domingo"
+    });
+}
 
 // Fecha y hora de cierre del registro de resultados.
 // Se usa la zona horaria de República Dominicana (UTC-04:00).
-const fechaCierreFormularios = new Date("2026-06-12T14:00:00-04:00");
-const mensajeCierreFormularios = "El registro de resultados cerró el 12 de junio de 2026 a las 2:00 p. m.";
+let fechaCierreFormularios = new Date(adminDefaults.years[anioSeleccionado]?.deadlineIso || "2999-12-31T23:59:00-04:00");
+let mensajeCierreFormularios = "El registro de resultados cerró el " + formatearFechaCierre(fechaCierreFormularios) + ".";
 
 function formulariosEstanDisponibles() {
     return new Date() < fechaCierreFormularios;
@@ -497,6 +1123,8 @@ function actualizarConteoCierreFormularios() {
 function seleccionarAnio(anio) {
     anioSeleccionado = anio;
     document.getElementById("anioActualTexto").textContent = anio;
+    aplicarConfigAdmin();
+    actualizarConteoCierreFormularios();
     if (dashboardActual === "sirevInteractivo") abrirDashboard("sirevInteractivo");
     else abrirDashboard("powerbi");
 
@@ -520,6 +1148,7 @@ function abrirDashboard(tipo) {
     }
 
     if (url) {
+        if (tipo === "sirevInteractivo") url = agregarParametrosAdmin(url);
         visor.src = url;
 
         // Power BI se carga desde otro dominio; por seguridad del navegador no puede medirse
@@ -529,8 +1158,8 @@ function abrirDashboard(tipo) {
             visor.style.minHeight = "850px";
             visor.scrolling = "auto";
         } else {
-            visor.style.height = "calc(100vh - 220px)";
-            visor.style.minHeight = "720px";
+            visor.style.height = "720px";
+            visor.style.minHeight = "0";
             setTimeout(ajustarAltoVisor, 500);
         }
     } else {
@@ -550,7 +1179,7 @@ function abrirRecurso(tipo, mes) {
 
 function abrirMonitoreo() {
     const url = datosPorAnio[anioSeleccionado].sistematizacion?.mayo;
-    if (url) window.open(url, "_blank");
+    if (url) window.open(agregarParametrosAdmin(url), "_blank");
     else alert("Monitoreo no disponible para este año escolar.");
     cerrarMenus();
 }
@@ -563,7 +1192,7 @@ function abrirFormulario(ciclo) {
     }
 
     const url = datosPorAnio[anioSeleccionado].formularios?.[ciclo];
-    if (url) window.open(url, "_blank");
+    if (url) window.open(agregarParametrosFormulario(url), "_blank");
     else alert("Formulario no disponible para este año escolar.");
     cerrarMenus();
 }
@@ -616,8 +1245,8 @@ function ajustarAltoVisor() {
             window.scrollTo(window.scrollX, y);
         });
     } catch (e) {
-        iframe.style.height = "calc(100vh - 220px)";
-        iframe.style.minHeight = "720px";
+        iframe.style.height = "720px";
+        iframe.style.minHeight = "0";
     }
 }
 
@@ -638,12 +1267,25 @@ if (visorSirev) {
         } catch (e) {}
     });
 }
-window.addEventListener("resize", ajustarAltoVisor);
-
+aplicarConfigAdmin();
+poblarMenuAnioPublico();
+abrirDashboard("sirevInteractivo");
 actualizarConteoCierreFormularios();
 setInterval(actualizarConteoCierreFormularios, 1000);
 
+window.addEventListener("resize", ajustarAltoVisor);
 document.addEventListener("click", cerrarMenus);
+document.getElementById("panelAdmin").addEventListener("click", (e) => {
+    if (e.target.id === "panelAdmin") cerrarPanelAdmin();
+});
+["adminUser","adminPass"].forEach(id => {
+    document.getElementById(id).addEventListener("keydown", (e) => {
+        if (e.key === "Enter") validarAccesoAdmin();
+    });
+});
+document.getElementById("adminNewYear").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") crearAnioAdmin();
+});
 </script>
 </body>
 </html>
