@@ -484,12 +484,13 @@ iframe{
             </div>
 
             <div class="dropdown">
-                <button class="nav-btn" onclick="toggleMenu('menuPruebas', event)">Pruebas y rúbricas <span class="chev">▼</span></button>
+                <button class="nav-btn" onclick="toggleMenu('menuPruebas', event)">Documentos <span class="chev">▼</span></button>
                 <div id="menuPruebas" class="dropdown-content">
                     <button onclick="abrirRecurso('pruebas','septiembre')">Septiembre</button>
                     <button onclick="abrirRecurso('pruebas','noviembre')">Noviembre</button>
                     <button onclick="abrirRecurso('pruebas','marzo')">Marzo</button>
                     <button onclick="abrirRecurso('pruebas','mayo')">Mayo</button>
+                    <button onclick="abrirMarcoEvaluacion()">Marco de Evaluación</button>
                 </div>
             </div>
 
@@ -561,19 +562,19 @@ iframe{
                     <input id="adminPowerBiUrl" type="text" placeholder="https://app.powerbi.com/view?...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminPruebaSeptiembre">Pruebas y rúbricas - Septiembre</label>
+                    <label for="adminPruebaSeptiembre">Documentos - Septiembre</label>
                     <input id="adminPruebaSeptiembre" type="text" placeholder="https://drive.google.com/...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminPruebaNoviembre">Pruebas y rúbricas - Noviembre</label>
+                    <label for="adminPruebaNoviembre">Documentos - Noviembre</label>
                     <input id="adminPruebaNoviembre" type="text" placeholder="https://drive.google.com/...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminPruebaMarzo">Pruebas y rúbricas - Marzo</label>
+                    <label for="adminPruebaMarzo">Documentos - Marzo</label>
                     <input id="adminPruebaMarzo" type="text" placeholder="https://drive.google.com/...">
                 </div>
                 <div class="admin-field">
-                    <label for="adminPruebaMayo">Pruebas y rúbricas - Mayo</label>
+                    <label for="adminPruebaMayo">Documentos - Mayo</label>
                     <input id="adminPruebaMayo" type="text" placeholder="https://drive.google.com/...">
                 </div>
                 <div class="admin-field">
@@ -593,14 +594,36 @@ iframe{
                     <input id="adminSistMayo" type="text" placeholder="monitoreo_sistematizacion_admin.html">
                 </div>
                 <div class="admin-field">
-                    <label for="adminPcUrl">Hoja primer ciclo</label>
-                    <input id="adminPcUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
-                    <small>Se acepta URL publicada CSV o enlace de Google Sheets.</small>
+                    <label for="adminPcUrlSep">Resultados Septiembre · Primer ciclo (1ro-3ro)</label>
+                    <input id="adminPcUrlSep" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
                 </div>
                 <div class="admin-field">
-                    <label for="adminScUrl">Hoja segundo ciclo</label>
-                    <input id="adminScUrl" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
-                    <small>Estas dos hojas alimentan el monitoreo embebiendo parámetros en la URL.</small>
+                    <label for="adminScUrlSep">Resultados Septiembre · Segundo ciclo (4to-6to)</label>
+                    <input id="adminScUrlSep" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                </div>
+                <div class="admin-field">
+                    <label for="adminPcUrlNov">Resultados Noviembre · Primer ciclo (1ro-3ro)</label>
+                    <input id="adminPcUrlNov" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                </div>
+                <div class="admin-field">
+                    <label for="adminScUrlNov">Resultados Noviembre · Segundo ciclo (4to-6to)</label>
+                    <input id="adminScUrlNov" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                </div>
+                <div class="admin-field">
+                    <label for="adminPcUrlMar">Resultados Marzo · Primer ciclo (1ro-3ro)</label>
+                    <input id="adminPcUrlMar" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                </div>
+                <div class="admin-field">
+                    <label for="adminScUrlMar">Resultados Marzo · Segundo ciclo (4to-6to)</label>
+                    <input id="adminScUrlMar" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                </div>
+                <div class="admin-field">
+                    <label for="adminPcUrlMay">Resultados Mayo · Primer ciclo (1ro-3ro)</label>
+                    <input id="adminPcUrlMay" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+                </div>
+                <div class="admin-field">
+                    <label for="adminScUrlMay">Resultados Mayo · Segundo ciclo (4to-6to)</label>
+                    <input id="adminScUrlMay" type="text" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
                 </div>
                 <div class="admin-field full">
                     <label for="adminDeadline">Fecha límite del registro de resultados</label>
@@ -616,20 +639,15 @@ iframe{
 
             <div class="admin-field full" style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:14px;">
                 <label for="adminPublishPass">Publicar para todos los visitantes</label>
-                <small>Esto sube el cambio directamente al repositorio de GitHub. Pide una clave distinta a la del panel — esa clave nunca está escrita en este archivo, solo tú la conoces.</small>
                 <input id="adminPublishPass" type="password" placeholder="Clave de publicación" style="margin-top:6px;max-width:260px;">
                 <div class="admin-actions" style="margin-top:8px;">
                     <button class="admin-action primary" onclick="publicarConfigAdmin()">Publicar para todos</button>
-                    <button class="admin-action" onclick="generarCodigoAdmin()">Generar código (manual, por si falla lo anterior)</button>
+                    <button class="admin-action" onclick="generarCodigoAdmin()">Generar código</button>
                 </div>
                 <div id="adminPublishStatus" class="admin-status" aria-live="polite"></div>
             </div>
 
             <div id="adminExportBox" class="admin-field full" style="display:none;margin-top:10px;">
-                <label for="adminExportTextarea">Código para pegar en el archivo (reemplaza la configuración publicada para todos)</label>
-                <small>
-                    1) Copia este texto. 2) En el código del sitio, busca la línea <code>const adminDefaults = ...</code> (puede ser la llamada a la función o un objeto ya pegado antes) y reemplázala por <code>const adminDefaults = </code> seguido de este texto y un punto y coma. 3) Sube el archivo a GitHub.
-                </small>
                 <textarea id="adminExportTextarea" readonly rows="10" style="width:100%;margin-top:8px;font-family:monospace;font-size:12.5px;"></textarea>
                 <div class="admin-actions" style="margin-top:8px;">
                     <button class="admin-action primary" onclick="copiarCodigoAdmin()">Copiar al portapapeles</button>
@@ -658,7 +676,7 @@ const datosPorAnio = {
             septiembre: "https://drive.google.com/drive/folders/1DVgvr8SuIApyFKk2kQUaZjy2c736xGZh",
             noviembre: "https://drive.google.com/drive/folders/1mHf3_gLi4ZIj_YLRPB0-CYh0b_Y1CMWV",
             marzo: "https://drive.google.com/drive/folders/1JP1DCceZfuHuNL4FxIySqalPvCh36SAb",
-            mayo: ""
+            mayo: "https://drive.google.com/drive/folders/1eBhnLyXc9YpKIeE9_kkhD18JwLmMknGm?usp=drive_link"
         },
         sistematizacion: {
             septiembre: "https://aminier06.github.io/sistematizacionsept-nov-mar/?mes=septiembre",
@@ -690,12 +708,73 @@ const ADMIN_SESSION_KEY = "sirevPrimariaAdminSession";
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "Sirev2026*";
 // Reemplaza esta URL por la de tu función de Supabase una vez la despliegues.
-const SUPABASE_FUNCTION_URL = "https://TU-PROYECTO.functions.supabase.co/publicar-config-sirev";
+const SUPABASE_FUNCTION_URL = "https://sikqxdzsjjqyqhcfihjp.supabase.co/functions/v1/publicar-config-sirev";
 const FORMULARIOS_FIJOS = {
     primerCiclo: "formulario_primer_ciclo.html",
     segundoCiclo: "formulario_segundo_ciclo.html"
 };
-const adminDefaults = construirConfigAdminBase();
+const MARCO_EVALUACION_URL = "https://drive.google.com/file/d/1c_vFWAbGmbTYObQ4g4GnkXcWxz2h2BGW/view?usp=drive_link";
+const adminDefaults = {
+  "years": {
+    "2025-2026": {
+      "dashboardUrl": "dashboard_sirev_primaria_v41_admin.html?v=46",
+      "powerBiUrl": "https://app.powerbi.com/view?r=eyJrIjoiZWE0NjFhYWYtY2M5ZS00ZDQ4LWFiZDAtNmU1ZGZkYTVjNWViIiwidCI6IjY2ZTI4OThiLTJjMzUtNDMzZi1hNzUzLWJkNjRhY2EzOWFmYiIsImMiOjF9",
+      "pruebas": {
+        "septiembre": "https://drive.google.com/drive/folders/1DVgvr8SuIApyFKk2kQUaZjy2c736xGZh",
+        "noviembre": "https://drive.google.com/drive/folders/1mHf3_gLi4ZIj_YLRPB0-CYh0b_Y1CMWV",
+        "marzo": "https://drive.google.com/drive/folders/1JP1DCceZfuHuNL4FxIySqalPvCh36SAb",
+        "mayo": "https://drive.google.com/drive/folders/1eBhnLyXc9YpKIeE9_kkhD18JwLmMknGm?usp=drive_link"
+      },
+      "sistematizacion": {
+        "septiembre": "https://aminier06.github.io/sistematizacionsept-nov-mar/?mes=septiembre",
+        "noviembre": "https://aminier06.github.io/sistematizacionsept-nov-mar/?mes=noviembre",
+        "marzo": "https://aminier06.github.io/sistematizacionsept-nov-mar/?mes=marzo",
+        "mayo": "monitoreo_sistematizacion_admin.html"
+      },
+      "pcUrl": "",
+      "scUrl": "",
+      "deadlineIso": "2026-06-12T14:00:00-04:00"
+    },
+    "2026-2027": {
+      "dashboardUrl": "",
+      "powerBiUrl": "",
+      "pruebas": {
+        "septiembre": "",
+        "noviembre": "",
+        "marzo": "",
+        "mayo": ""
+      },
+      "sistematizacion": {
+        "septiembre": "",
+        "noviembre": "",
+        "marzo": "",
+        "mayo": ""
+      },
+      "pcUrl": "",
+      "scUrl": "",
+      "deadlineIso": ""
+    },
+    "2024-2025": {
+      "dashboardUrl": "",
+      "powerBiUrl": "",
+      "pruebas": {
+        "septiembre": "",
+        "noviembre": "",
+        "marzo": "",
+        "mayo": ""
+      },
+      "sistematizacion": {
+        "septiembre": "",
+        "noviembre": "",
+        "marzo": "",
+        "mayo": ""
+      },
+      "pcUrl": "",
+      "scUrl": "",
+      "deadlineIso": ""
+    }
+  }
+};
 let adminConfig = cargarConfigAdmin();
 let anioAdminSeleccionado = anioSeleccionado;
 
@@ -709,8 +788,12 @@ function crearConfigAnioVacia() {
         powerBiUrl: "",
         pruebas: {septiembre: "", noviembre: "", marzo: "", mayo: ""},
         sistematizacion: {septiembre: "", noviembre: "", marzo: "", mayo: ""},
-        pcUrl: "",
-        scUrl: "",
+        periodos: {
+            septiembre: {pc:"",sc:""},
+            noviembre:  {pc:"",sc:""},
+            marzo:      {pc:"",sc:""},
+            mayo:       {pc:"",sc:""}
+        },
         deadlineIso: ""
     };
 }
@@ -745,6 +828,12 @@ function construirConfigAdminBase() {
             },
             pcUrl: "",
             scUrl: "",
+            periodos: {
+                septiembre: {pc:"",sc:""},
+                noviembre:  {pc:"",sc:""},
+                marzo:      {pc:"",sc:""},
+                mayo:       {pc:"",sc:""}
+            },
             deadlineIso: anio === "2025-2026" ? "2026-06-12T14:00:00-04:00" : ""
         };
     });
@@ -886,8 +975,15 @@ function llenarFormularioAdmin() {
     document.getElementById("adminSistNoviembre").value = cfg.sistematizacion?.noviembre || "";
     document.getElementById("adminSistMarzo").value = cfg.sistematizacion?.marzo || "";
     document.getElementById("adminSistMayo").value = cfg.sistematizacion?.mayo || "";
-    document.getElementById("adminPcUrl").value = cfg.pcUrl || "";
-    document.getElementById("adminScUrl").value = cfg.scUrl || "";
+    const perUI = cfg.periodos || {};
+    document.getElementById("adminPcUrlSep").value = perUI.septiembre?.pc || "";
+    document.getElementById("adminScUrlSep").value = perUI.septiembre?.sc || "";
+    document.getElementById("adminPcUrlNov").value = perUI.noviembre?.pc || "";
+    document.getElementById("adminScUrlNov").value = perUI.noviembre?.sc || "";
+    document.getElementById("adminPcUrlMar").value = perUI.marzo?.pc || "";
+    document.getElementById("adminScUrlMar").value = perUI.marzo?.sc || "";
+    document.getElementById("adminPcUrlMay").value = perUI.mayo?.pc || "";
+    document.getElementById("adminScUrlMay").value = perUI.mayo?.sc || "";
     document.getElementById("adminDeadline").value = fechaIsoParaInput(cfg.deadlineIso || "");
     document.getElementById("adminStatus").textContent = "";
 }
@@ -963,7 +1059,7 @@ async function publicarConfigAdmin() {
         });
         const data = await resp.json().catch(() => ({}));
         if (resp.ok && data.ok) {
-            status.textContent = "Publicado. El sitio puede tardar uno o dos minutos en reflejar el cambio para todos.";
+            status.textContent = "Publicado correctamente.";
             claveInput.value = "";
         } else {
             status.textContent = "No se pudo publicar: " + (data.error || ("Error " + resp.status));
@@ -1015,8 +1111,12 @@ function guardarConfigAdmin() {
             marzo: document.getElementById("adminSistMarzo").value.trim(),
             mayo: document.getElementById("adminSistMayo").value.trim()
         },
-        pcUrl: document.getElementById("adminPcUrl").value.trim(),
-        scUrl: document.getElementById("adminScUrl").value.trim(),
+        periodos: {
+            septiembre: {pc:document.getElementById("adminPcUrlSep").value.trim(),sc:document.getElementById("adminScUrlSep").value.trim()},
+            noviembre:  {pc:document.getElementById("adminPcUrlNov").value.trim(),sc:document.getElementById("adminScUrlNov").value.trim()},
+            marzo:      {pc:document.getElementById("adminPcUrlMar").value.trim(),sc:document.getElementById("adminScUrlMar").value.trim()},
+            mayo:       {pc:document.getElementById("adminPcUrlMay").value.trim(),sc:document.getElementById("adminScUrlMay").value.trim()}
+        },
         deadlineIso: inputFechaAIso(document.getElementById("adminDeadline").value, anioAdminSeleccionado)
     };
     localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(adminConfig));
@@ -1043,8 +1143,16 @@ function agregarParametrosAdmin(url) {
     if (!url) return url;
     const cfg = configAnio(anioSeleccionado);
     const params = new URLSearchParams();
-    if (cfg.pcUrl) params.set("pcUrl", cfg.pcUrl);
-    if (cfg.scUrl) params.set("scUrl", cfg.scUrl);
+    const per = cfg.periodos || {};
+    const enc = v => v ? encodeURIComponent(v) : "";
+    if (per.septiembre?.pc) params.set("pcSep", enc(per.septiembre.pc));
+    if (per.septiembre?.sc) params.set("scSep", enc(per.septiembre.sc));
+    if (per.noviembre?.pc)  params.set("pcNov", enc(per.noviembre.pc));
+    if (per.noviembre?.sc)  params.set("scNov", enc(per.noviembre.sc));
+    if (per.marzo?.pc)      params.set("pcMar", enc(per.marzo.pc));
+    if (per.marzo?.sc)      params.set("scMar", enc(per.marzo.sc));
+    if (per.mayo?.pc)       params.set("pcMay", enc(per.mayo.pc));
+    if (per.mayo?.sc)       params.set("scMay", enc(per.mayo.sc));
     const query = params.toString();
     if (!query) return url;
     return url + (url.includes("?") ? "&" : "?") + query;
@@ -1140,7 +1248,7 @@ function abrirDashboard(tipo) {
     if (tipo === "sirevInteractivo") {
         url = datosPorAnio[anioSeleccionado].dashboard;
         visor.title = "Dashboard interactivo SIREV Primaria";
-        if (quickNote) quickNote.textContent = "Dashboard interactivo · datos consolidados";
+        if (quickNote) quickNote.textContent = "Dashboard interactivo";
     } else {
         url = datosPorAnio[anioSeleccionado].informe;
         visor.title = "Evaluación Diagnóstica y de Seguimiento Nivel Primario 2025-2026";
@@ -1174,6 +1282,11 @@ function abrirRecurso(tipo, mes) {
     const url = datosPorAnio[anioSeleccionado][tipo]?.[mes];
     if (url) window.open(url, "_blank");
     else alert("Recurso no disponible para este año escolar.");
+    cerrarMenus();
+}
+
+function abrirMarcoEvaluacion() {
+    window.open(MARCO_EVALUACION_URL, "_blank");
     cerrarMenus();
 }
 
