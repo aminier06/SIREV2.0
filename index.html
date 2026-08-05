@@ -1144,7 +1144,7 @@ function agregarParametrosAdmin(url) {
     const cfg = configAnio(anioSeleccionado);
     const params = new URLSearchParams();
     const per = cfg.periodos || {};
-    const enc = v => v ? encodeURIComponent(v) : "";
+    const enc = v => v || "";
     if (per.septiembre?.pc) params.set("pcSep", enc(per.septiembre.pc));
     if (per.septiembre?.sc) params.set("scSep", enc(per.septiembre.sc));
     if (per.noviembre?.pc)  params.set("pcNov", enc(per.noviembre.pc));
@@ -1153,6 +1153,14 @@ function agregarParametrosAdmin(url) {
     if (per.marzo?.sc)      params.set("scMar", enc(per.marzo.sc));
     if (per.mayo?.pc)       params.set("pcMay", enc(per.mayo.pc));
     if (per.mayo?.sc)       params.set("scMay", enc(per.mayo.sc));
+    // Guardar en localStorage para que el dashboard los lea directamente,
+    // evitando problemas de codificación en parámetros de URL.
+    try {
+        localStorage.setItem('sirevDashboardUrls', JSON.stringify({
+            anio: anioSeleccionado,
+            periodos: per
+        }));
+    } catch(e) {}
     const query = params.toString();
     if (!query) return url;
     return url + (url.includes("?") ? "&" : "?") + query;
