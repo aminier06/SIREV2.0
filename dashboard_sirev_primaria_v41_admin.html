@@ -1445,9 +1445,24 @@ function csvConstruir(entradas){
   return{dict:dictArr,cov,perf_base,perf_comp,perf_ind,read,meta:Array.from(metaMap.values()),version:'csv'};
 }
 function csvObtenerUrls(){
+  // Leer desde localStorage (escrito por index.html en cada cambio de año).
+  // Esto evita los problemas de codificación que ocurren cuando se pasan
+  // URLs largas de Google Sheets como parámetros en la URL del iframe.
+  try{
+    const stored=JSON.parse(localStorage.getItem('sirevDashboardUrls')||'{}');
+    const per=stored.periodos||{};
+    const g=(p,c)=>per[p]?.[c]||'';
+    const urls=[
+      {periodo:'Septiembre',pc:g('septiembre','pc'),sc:g('septiembre','sc')},
+      {periodo:'Noviembre', pc:g('noviembre','pc'), sc:g('noviembre','sc')},
+      {periodo:'Marzo',     pc:g('marzo','pc'),     sc:g('marzo','sc')},
+      {periodo:'Mayo',      pc:g('mayo','pc'),      sc:g('mayo','sc')},
+    ].filter(e=>e.pc||e.sc);
+    if(urls.length) return urls;
+  }catch(e){}
+  // Respaldo: leer desde parámetros de URL (descodificando correctamente)
   const params=new URLSearchParams(window.location.search);
-  // URLSearchParams.get() ya decodifica — no hace falta decodeURIComponent adicional.
-  const g=k=>params.get(k)||'';
+  const g=k=>{const v=params.get(k); return v?decodeURIComponent(v):''};
   return [
     {periodo:'Septiembre',pc:g('pcSep'),sc:g('scSep')},
     {periodo:'Noviembre', pc:g('pcNov'),sc:g('scNov')},
