@@ -1382,14 +1382,15 @@ function csvConstruir(entradas){
     const norm=h=>String(h||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     const hdrIdx={};enc.forEach((h,i)=>{hdrIdx[norm(h)]=i;});
     const col=(...ns)=>{for(const n of ns){if(hdrIdx[n]!==undefined)return hdrIdx[n];}return -1;};
-    const iColCentro=col('centro');
-    const iColReg=col('regional');
-    const iColDis=col('distrito');
-    const iColSec=col('sector');
-    const iColTip=col('tipo','tipo de centro');
-    const iColTan=col('tanda');
+    const iColCentro = col('centro','nombre centro','centro educativo','nombre del centro','nombre de centro');
+    const iColReg    = col('regional','nombre regional','regional educativa','regional de educacion','region');
+    const iColDis    = col('distrito','nombre distrito','distrito educativo','distrito escolar');
+    const iColSec    = col('sector','sector educativo','tipo sector');
+    const iColTip    = col('tipo','tipo de centro','tipologia','tipo centro','tipología');
+    const iColTan    = col('tanda','jornada','turno');
     const g=(i)=>(i>=0?(filas[0]&&fila[i]||'').trim():''); // placeholder, redefined per row below
-    const primerArea=new Map(),primerComp=new Map();
+    console.log(`[CSV ${periodo}] Columnas detectadas: centro=${iColCentro}, regional=${iColReg}, distrito=${iColDis}, sector=${iColSec}, tipo=${iColTip}, tanda=${iColTan}`);
+    console.log(`[CSV ${periodo}] Filas procesadas: ${filas.length-1}. COV antes: ${cov.length}`);
     for(const c of colInfo){
       if(!c||c.tipo!=='perf')continue;
       const ka=`${c.grado}|${c.area}`;if(!primerArea.has(ka))primerArea.set(ka,{comp:c.comp,ind:c.ind});
@@ -1445,12 +1446,13 @@ function csvConstruir(entradas){
 }
 function csvObtenerUrls(){
   const params=new URLSearchParams(window.location.search);
-  const dec=v=>v?decodeURIComponent(v):'';
+  // URLSearchParams.get() ya decodifica — no hace falta decodeURIComponent adicional.
+  const g=k=>params.get(k)||'';
   return [
-    {periodo:'Septiembre',pc:dec(params.get('pcSep')),sc:dec(params.get('scSep'))},
-    {periodo:'Noviembre', pc:dec(params.get('pcNov')),sc:dec(params.get('scNov'))},
-    {periodo:'Marzo',     pc:dec(params.get('pcMar')),sc:dec(params.get('scMar'))},
-    {periodo:'Mayo',      pc:dec(params.get('pcMay')),sc:dec(params.get('scMay'))},
+    {periodo:'Septiembre',pc:g('pcSep'),sc:g('scSep')},
+    {periodo:'Noviembre', pc:g('pcNov'),sc:g('scNov')},
+    {periodo:'Marzo',     pc:g('pcMar'),sc:g('scMar')},
+    {periodo:'Mayo',      pc:g('pcMay'),sc:g('scMay')},
   ].filter(e=>e.pc||e.sc);
 }
 async function csvFetcher(url){
