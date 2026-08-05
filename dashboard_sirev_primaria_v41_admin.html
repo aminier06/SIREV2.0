@@ -1375,6 +1375,21 @@ function csvConstruir(entradas){
     const enc=filas[0];
     const colInfo=enc.map(csvClasCol);
     const iPer=d(periodo);
+
+    // Detectar columnas fijas por nombre de encabezado (sin importar el orden).
+    // Esto hace que el parser sea insensible al orden de las columnas y permite
+    // añadir, quitar o mover columnas en la hoja sin tocar el código.
+    const norm=h=>String(h||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const hdrIdx={};
+    enc.forEach((h,i)=>{ hdrIdx[norm(h)]=i; });
+    const col=(nombres)=>{ for(const n of nombres){ if(hdrIdx[n]!==undefined)return hdrIdx[n]; } return -1; };
+    const iColCentro   = col(['centro']);
+    const iColRegional = col(['regional']);
+    const iColDistrito = col(['distrito']);
+    const iColSector   = col(['sector']);
+    const iColTipo     = col(['tipo','tipo de centro']);
+    const iColTanda    = col(['tanda']);
+
     const primerArea=new Map(),primerComp=new Map();
     for(const c of colInfo){
       if(!c||c.tipo!=='perf')continue;
@@ -1384,13 +1399,14 @@ function csvConstruir(entradas){
     for(let ri=1;ri<filas.length;ri++){
       const fila=filas[ri];
       if(!fila||fila.length<7)continue;
-      const centro=(fila[1]||'').trim();if(!centro)continue;
-      const iReg=d(csvNormReg(fila[2]));
-      const iDis=d((fila[3]||'').trim());
+      const g=(i)=>(i>=0?(fila[i]||'').trim():'');
+      const centro=g(iColCentro);if(!centro)continue;
+      const iReg=d(csvNormReg(g(iColRegional)));
+      const iDis=d(g(iColDistrito));
       const iCen=d(centro);
-      const iTip=d((fila[4]||'').trim());
-      const iTan=d((fila[5]||'').trim());
-      const iSec=d('');
+      const iTip=d(g(iColTipo));
+      const iTan=d(g(iColTanda));
+      const iSec=d(g(iColSector)); // vacío si la hoja no tiene columna Sector
       const mat={},ev={};
       for(let ci=0;ci<colInfo.length;ci++){
         const c=colInfo[ci];if(!c)continue;
@@ -1399,9 +1415,9 @@ function csvConstruir(entradas){
         else if(c.tipo==='ev')ev[c.grado]=(ev[c.grado]||0)+v;
       }
       const grados=new Set([...Object.keys(mat),...Object.keys(ev)].map(Number));
-      for(const g of grados){
-        const iG=d(String(g));
-        cov.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,iG,iG,mat[g]||0,ev[g]||0]);
+      for(const g2 of grados){
+        const iG=d(String(g2));
+        cov.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,iG,iG,mat[g2]||0,ev[g2]||0]);
       }
       for(let ci=0;ci<colInfo.length;ci++){
         const c=colInfo[ci];if(!c)continue;
