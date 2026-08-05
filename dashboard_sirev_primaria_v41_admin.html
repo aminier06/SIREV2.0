@@ -1281,7 +1281,7 @@ function loadMsg(msg){const el=document.getElementById('loadDetail'); if(el) el.
 function showLoadError(msg){
   const box=document.getElementById('loading');
   if(box){
-    box.innerHTML='<div style="max-width:760px;margin:auto;text-align:left;background:#fff;border:1px solid #f2a900;border-radius:14px;padding:18px;color:#003B71;line-height:1.45"><b>No se pudieron cargar los datos del dashboard.</b><br>'+msg+'<br><br><b>Revise que estén en la misma carpeta:</b><br>dashboard_data_core_v41_part1.js a part5.js<br>dashboard_data_ind_v41_part1.js a part4.js<br>catalogo_centros_primaria_v41.js</div>';
+    box.innerHTML='<div style="max-width:680px;margin:auto;text-align:left;background:#fff;border:1px solid #f2a900;border-radius:14px;padding:22px;color:#003B71;line-height:1.55"><b>No se pudieron cargar los datos del dashboard.</b><br><br>'+msg+'</div>';
   }
 }
 function decodeB64Gz(b64){
