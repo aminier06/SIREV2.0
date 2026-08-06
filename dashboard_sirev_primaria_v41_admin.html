@@ -1391,6 +1391,7 @@ function csvConstruir(entradas){
     const g=(i)=>(i>=0?(filas[0]&&fila[i]||'').trim():''); // placeholder, redefined per row below
     console.log(`[CSV ${periodo}] Columnas detectadas: centro=${iColCentro}, regional=${iColReg}, distrito=${iColDis}, sector=${iColSec}, tipo=${iColTip}, tanda=${iColTan}`);
     console.log(`[CSV ${periodo}] Filas procesadas: ${filas.length-1}. COV antes: ${cov.length}`);
+    const primerArea=new Map(),primerComp=new Map();
     for(const c of colInfo){
       if(!c||c.tipo!=='perf')continue;
       const ka=`${c.grado}|${c.area}`;if(!primerArea.has(ka))primerArea.set(ka,{comp:c.comp,ind:c.ind});
