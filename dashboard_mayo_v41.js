@@ -408,6 +408,15 @@
   }
 
   async function integrarMayo() {
+    // En modo CSV, todos los periodos (incluyendo Mayo) ya fueron cargados
+    // directamente desde las hojas de Google Sheets configuradas por año.
+    // Este módulo solo debe correr en el modo compilado (año 2025-2026).
+    if (window.__SIREV_CSV_MODE__) {
+      window.__SIREV_MAYO_READY__ = true;
+      console.info('[SIREV Mayo] Modo CSV activo — módulo de Mayo desactivado para este año.');
+      return;
+    }
+
     if (window.__SIREV_MAYO_INTEGRATING__) return;
     window.__SIREV_MAYO_INTEGRATING__ = true;
 
