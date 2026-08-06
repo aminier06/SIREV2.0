@@ -21,15 +21,32 @@
 <script src="dashboard_data_ind_v41_part4.js?v=41"></script>
 <script src="dashboard_mayo_v41.js?v=46"></script>
 <script>
-// Interceptor de modo CSV: cuando el cargador CSV activa __SIREV_CSV_MODE__,
-// window.pcUrl y window.scUrl devuelven '' para que el módulo de Mayo no
-// inyecte datos del año incorrecto.
+// Interceptor de modo CSV: bloquea el acceso a pcUrl/scUrl tanto a través de
+// window.pcUrl/scUrl como de URLSearchParams (que el módulo de Mayo podría usar
+// directamente para leer los parámetros de la URL).
 (function(){
   var _pc='', _sc='', _csvMode=false;
   function def(k,get,set){try{Object.defineProperty(window,k,{get,set,configurable:true,enumerable:true});}catch(e){}}
   def('pcUrl',function(){return _csvMode?'':_pc;},function(v){_pc=v||'';});
   def('scUrl',function(){return _csvMode?'':_sc;},function(v){_sc=v||'';});
-  def('__SIREV_CSV_MODE__',function(){return _csvMode;},function(v){_csvMode=!!v;});
+  def('__SIREV_CSV_MODE__',function(){return _csvMode;},function(v){
+    _csvMode=!!v;
+    if(_csvMode){
+      // Cuando el modo CSV se activa, parchamos URLSearchParams para que
+      // cualquier lectura de 'pcUrl' o 'scUrl' devuelva cadena vacía.
+      var _orig=window.URLSearchParams;
+      window.URLSearchParams=function(init){
+        var inst=new _orig(init);
+        var _origGet=inst.get.bind(inst);
+        inst.get=function(k){
+          if(k==='pcUrl'||k==='scUrl')return '';
+          return _origGet(k);
+        };
+        return inst;
+      };
+      window.URLSearchParams.prototype=_orig.prototype;
+    }
+  });
 })();
 </script>
 <style>
@@ -1373,9 +1390,9 @@ function csvNormReg(s){
 function csvClasCol(h){
   let m;
   m=h.match(/^Matr[íi]cula\s+(\d+(?:ro|do|to))$/i);
-  if(m)return{tipo:'mat',grado:CSV_GRADO[m[1]]||0};
+  if(m)return{tipo:'mat',grado:CSV_GRADO[m[1].toLowerCase()]||0};
   m=h.match(/^EVALUADOS?\s+(\d+(?:ro|do|to))$/i);
-  if(m)return{tipo:'ev',grado:CSV_GRADO[m[1]]||0};
+  if(m)return{tipo:'ev',grado:CSV_GRADO[m[1].toLowerCase()]||0};
   m=h.match(/^G(\d)-([A-Z]+)-IND(\d+)\.(\d+)\s+\(([SAE])\)$/i);
   if(m){const area=CSV_AREA[m[2].toUpperCase()];if(!area)return null;
     return{tipo:'perf',grado:+m[1],area,comp:m[3],ind:`${m[3]}.${m[4]}`,nivel:CSV_NIVEL[m[5].toUpperCase()]};}
