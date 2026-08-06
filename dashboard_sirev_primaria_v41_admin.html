@@ -1506,6 +1506,9 @@ async function loadData(){
       READ=DATA.read;COV=DATA.cov;
       window.DATA=DATA;window.D=D;window.PERF_BASE=PERF_BASE;window.PERF_COMP=PERF_COMP;
       window.READ=READ;window.COV=COV;window.PERF_IND=PERF_IND;
+      // Evitar que dashboard_mayo_v41.js inyecte datos del año incorrecto:
+      // vaciamos las URLs que usa ese módulo y señalamos que Mayo ya está cargado.
+      window.pcUrl=''; window.scUrl='';
       window.__SIREV_MAYO_READY__=true;
       document.getElementById('loading').style.display='none';
       init();
