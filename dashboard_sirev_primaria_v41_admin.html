@@ -1387,10 +1387,10 @@ function csvClasCol(h){
   if(m)return{tipo:'mat',grado:CSV_GRADO[m[1].toLowerCase()]||0};
   m=h.match(/^EVALUADOS?\s+(\d+(?:ro|do|to))$/i);
   if(m)return{tipo:'ev',grado:CSV_GRADO[m[1].toLowerCase()]||0};
-  m=h.match(/^G(\d)-([A-Z]+)-IND(\d+)\.(\d+)\s+\(([SAE])\)$/i);
+  m=h.match(/^G(\d)-([A-Z]+)-IND(\d+)\.(\d+)\s*\(([SAE])\)$/i);
   if(m){const area=CSV_AREA[m[2].toUpperCase()];if(!area)return null;
     return{tipo:'perf',grado:+m[1],area,comp:m[3],ind:`${m[3]}.${m[4]}`,nivel:CSV_NIVEL[m[5].toUpperCase()]};}
-  m=h.match(/^G(\d)-LT-(N\d)\s+\(/i);
+  m=h.match(/^G(\d)-LT-(N\d)/i);
   if(m){const nombre=CSV_READ[m[2].toUpperCase()];if(!nombre)return null;
     return{tipo:'lect',grado:+m[1],nombre};}
   return null;
