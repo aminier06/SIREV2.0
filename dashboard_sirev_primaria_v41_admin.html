@@ -21,32 +21,20 @@
 <script src="dashboard_data_ind_v41_part4.js?v=41"></script>
 <script src="dashboard_mayo_v41.js?v=46"></script>
 <script>
-// Interceptor de modo CSV: bloquea el acceso a pcUrl/scUrl tanto a través de
-// window.pcUrl/scUrl como de URLSearchParams (que el módulo de Mayo podría usar
-// directamente para leer los parámetros de la URL).
+// Garantía adicional: si por algún motivo __SIREV_CSV_MODE__ ya está activo
+// cuando el módulo de Mayo se registra, lo marcamos como listo de inmediato.
 (function(){
-  var _pc='', _sc='', _csvMode=false;
-  function def(k,get,set){try{Object.defineProperty(window,k,{get,set,configurable:true,enumerable:true});}catch(e){}}
-  def('pcUrl',function(){return _csvMode?'':_pc;},function(v){_pc=v||'';});
-  def('scUrl',function(){return _csvMode?'':_sc;},function(v){_sc=v||'';});
-  def('__SIREV_CSV_MODE__',function(){return _csvMode;},function(v){
-    _csvMode=!!v;
-    if(_csvMode){
-      // Cuando el modo CSV se activa, parchamos URLSearchParams para que
-      // cualquier lectura de 'pcUrl' o 'scUrl' devuelva cadena vacía.
-      var _orig=window.URLSearchParams;
-      window.URLSearchParams=function(init){
-        var inst=new _orig(init);
-        var _origGet=inst.get.bind(inst);
-        inst.get=function(k){
-          if(k==='pcUrl'||k==='scUrl')return '';
-          return _origGet(k);
-        };
-        return inst;
-      };
-      window.URLSearchParams.prototype=_orig.prototype;
-    }
-  });
+  var _csv=false;
+  try{
+    Object.defineProperty(window,'__SIREV_CSV_MODE__',{
+      get:function(){return _csv;},
+      set:function(v){
+        _csv=!!v;
+        if(_csv&&!window.__SIREV_MAYO_READY__)window.__SIREV_MAYO_READY__=true;
+      },
+      configurable:true,enumerable:true
+    });
+  }catch(e){}
 })();
 </script>
 <style>
@@ -1451,24 +1439,22 @@ function csvConstruir(entradas){
       }
       const grados=new Set([...Object.keys(mat),...Object.keys(ev)].map(Number));
       for(const g2 of grados){
-        const iG=d(String(g2));
-        cov.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,iG,iG,mat[g2]||0,ev[g2]||0]);
+        cov.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,g2,g2,mat[g2]||0,ev[g2]||0]); // g2 = número real de grado
       }
       for(let ci=0;ci<colInfo.length;ci++){
         const c=colInfo[ci];if(!c)continue;
         const v=csvNum(fila[ci]);
         if(c.tipo==='perf'){
-          const iG=d(String(c.grado)),iArea=d(c.area),iComp=d(c.comp),iInd=d(c.ind),iNiv=d(c.nivel);
+          const iArea=d(c.area),iComp=d(c.comp),iInd=d(c.ind),iNiv=d(c.nivel);
           const mk=`${c.area}||${c.comp}||${c.ind}`;
           if(!metaMap.has(mk))metaMap.set(mk,[iArea,iComp,iInd]);
-          if(v>0)perf_ind.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,iG,iG,iArea,iComp,iInd,iNiv,v]);
+          if(v>0)perf_ind.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,c.grado,c.grado,iArea,iComp,iInd,iNiv,v]);
           const pc=primerComp.get(`${c.grado}|${c.area}|${c.comp}`);
-          if(pc&&pc.comp===c.comp&&pc.ind===c.ind)perf_comp.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,iG,iG,iArea,iComp,-1,iNiv,v]);
+          if(pc&&pc.comp===c.comp&&pc.ind===c.ind)perf_comp.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,c.grado,c.grado,iArea,iComp,-1,iNiv,v]);
           const pa=primerArea.get(`${c.grado}|${c.area}`);
-          if(pa&&pa.comp===c.comp&&pa.ind===c.ind)perf_base.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,iG,iG,iArea,-1,-1,iNiv,v]);
+          if(pa&&pa.comp===c.comp&&pa.ind===c.ind)perf_base.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,c.grado,c.grado,iArea,-1,-1,iNiv,v]);
         }else if(c.tipo==='lect'&&v>0){
-          const iG=d(String(c.grado));
-          read.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,iG,iG,d(c.nombre),v]);
+          read.push([iReg,iDis,iCen,iSec,iTip,iTan,iPer,c.grado,c.grado,d(c.nombre),v]);
         }
       }
     }
@@ -1547,7 +1533,9 @@ async function loadData(){
 
     if(periodoUrls.length>0){
       // ── Modo CSV: año con hojas publicadas configuradas ────────────
-      window.__SIREV_CSV_MODE__=true; // impide que dashboard_mayo_v41.js duplique datos
+      // Activar el flag ANTES de cualquier await para que el módulo de Mayo
+      // lo detecte en cuanto el dashboard esté listo y salga sin inyectar nada.
+      window.__SIREV_CSV_MODE__=true;
       const entradas=[];
       for(const e of periodoUrls){
         loadMsg(`Cargando ${e.periodo}...`);
