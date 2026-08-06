@@ -19,22 +19,28 @@
 <script src="dashboard_data_ind_v41_part2.js?v=41"></script>
 <script src="dashboard_data_ind_v41_part3.js?v=41"></script>
 <script src="dashboard_data_ind_v41_part4.js?v=41"></script>
-<script src="dashboard_mayo_v41.js?v=46"></script>
 <script>
-// Garantía adicional: si por algún motivo __SIREV_CSV_MODE__ ya está activo
-// cuando el módulo de Mayo se registra, lo marcamos como listo de inmediato.
+// El módulo de Mayo solo se necesita en modo compilado (año 2025-2026).
+// En modo CSV, todos los periodos ya están en las hojas configuradas.
+// Se decide aquí, ANTES de cargar el módulo, leyendo el localStorage
+// que aplicarConfigAdmin() ya escribió con la config del año activo.
 (function(){
-  var _csv=false;
-  try{
-    Object.defineProperty(window,'__SIREV_CSV_MODE__',{
-      get:function(){return _csv;},
-      set:function(v){
-        _csv=!!v;
-        if(_csv&&!window.__SIREV_MAYO_READY__)window.__SIREV_MAYO_READY__=true;
-      },
-      configurable:true,enumerable:true
-    });
-  }catch(e){}
+  var esModoCSV = false;
+  try {
+    var cfg = JSON.parse(localStorage.getItem('sirevDashboardUrls') || '{}');
+    var per = cfg.periodos || {};
+    esModoCSV = Object.values(per).some(function(p){ return p && (p.pc || p.sc); });
+  } catch(e) {}
+  if (!esModoCSV) {
+    // Modo compilado: cargar el módulo de Mayo normalmente
+    var s = document.createElement('script');
+    s.src = 'dashboard_mayo_v41.js?v=46';
+    document.head.appendChild(s);
+  } else {
+    // Modo CSV: señalar al dashboard que Mayo ya está integrado
+    window.__SIREV_MAYO_READY__ = true;
+    console.info('[SIREV] Modo CSV — módulo de Mayo no cargado.');
+  }
 })();
 </script>
 <style>
